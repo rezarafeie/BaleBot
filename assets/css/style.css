@@ -1,0 +1,9 @@
+/* assets/css/style.css */
+body {
+    direction: rtl;
+    text-align: right;
+    font-family: Tahoma, Arial, sans-serif;
+    color: #1e293b;
+    background-color: #f8fafc;
+}
+
