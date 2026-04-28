@@ -126,6 +126,15 @@ CREATE TABLE IF NOT EXISTS `settings` (
   PRIMARY KEY (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `system_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `log_type` varchar(50) NOT NULL,
+  `message` text NOT NULL,
+  `details` text,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('webhook_url', '');
 INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('gapgpt_api_key', '');
 INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('event_selection_text', '');

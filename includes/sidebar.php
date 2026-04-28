@@ -24,6 +24,7 @@
             <li><?= navLink('users.php', 'people', 'کاربران بات', $current_page) ?></li>
             <li><?= navLink('broadcast.php', 'megaphone', 'ارسال پیام انبوه', $current_page) ?></li>
             <li><?= navLink('media.php', 'images', 'کتابخانه رسانه', $current_page) ?></li>
+            <li><?= navLink('logs.php', 'journal-code', 'لاگ‌های سیستم', $current_page) ?></li>
             <li><?= navLink('settings.php', 'gear', 'تنظیمات سیستم', $current_page) ?></li>
         </ul>
     </nav>

@@ -8,12 +8,10 @@ class EventManager {
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
         
-        try {
-            $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0");
-            $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL");
-            $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL");
-            $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1");
-        } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
         
         try {
             $this->db->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('gapgpt_api_key', '')");

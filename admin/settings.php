@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $url = $_POST['webhook_url'];
         $db->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'webhook_url'")->execute([$url]);
         $res = $bot->setWebhook($url . "?secret=" . WEBHOOK_SECRET);
-        $msg = "وب‌هوک ست شد. وضعیت: " . ($res['ok'] ? 'موفق' : 'ناموفق');
+        $msg = "وب‌هوک ست شد. وضعیت: " . (isset($res['ok']) && $res['ok'] ? 'موفق' : 'ناموفق');
     } elseif (isset($_POST['delete_webhook'])) {
         $res = $bot->deleteWebhook();
         $db->prepare("UPDATE settings SET setting_value = '' WHERE setting_key = 'webhook_url'")->execute();
-        $msg = "وب‌هوک غیرفعال شد. وضعیت: " . ($res['ok'] ? 'موفق' : 'ناموفق');
+        $msg = "وب‌هوک غیرفعال شد. وضعیت: " . (isset($res['ok']) && $res['ok'] ? 'موفق' : 'ناموفق');
     } elseif (isset($_POST['change_pass'])) {
         if (!empty($_POST['new_pass'])) {
             $auth->updatePassword($_POST['new_pass']);

@@ -4,6 +4,7 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/BaleBot.php';
 require_once __DIR__ . '/classes/EventManager.php';
 require_once __DIR__ . '/classes/RegistrationManager.php';
+require_once __DIR__ . '/classes/Logger.php';
 
 // Security check
 if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
@@ -12,6 +13,9 @@ if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
 }
 
 $input = file_get_contents('php://input');
+if (trim($input)) {
+    Logger::log('webhook', 'Incoming webhook', json_decode($input, true) ?: ['raw' => $input]);
+}
 $update = json_decode($input, true);
 
 if (!$update) {

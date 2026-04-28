@@ -1,5 +1,7 @@
 <?php
 // classes/BaleBot.php
+require_once __DIR__ . '/Logger.php';
+
 class BaleBot {
     private $token;
     private $apiUrl;
@@ -38,7 +40,11 @@ class BaleBot {
 
         $response = curl_exec($ch);
         if (curl_errno($ch)) {
-            error_log('BaleBot Request Error: ' . curl_error($ch));
+            $err = curl_error($ch);
+            error_log('BaleBot Request Error: ' . $err);
+            Logger::log('api', "BaleBot Request Error: " . $err, ['method' => $method, 'data' => $data]);
+        } else {
+            Logger::log('api', "BaleBot API: " . $method, ['data' => $data, 'response' => json_decode($response, true) ?: $response]);
         }
         curl_close($ch);
         
