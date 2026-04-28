@@ -1,4 +1,5 @@
 <?php
+ob_start();
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -56,13 +57,13 @@ function url($path = '') {
         <header class="h-[80px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-8 shrink-0">
             <div class="flex items-center gap-6">
                 <!-- Bot Switcher -->
-                <div class="relative group">
-                    <button class="flex items-center gap-3 bg-[#f8fafc] border border-[#e2e8f0] px-4 py-2 rounded-xl text-sm font-semibold text-[#1e293b] hover:border-blue-300 transition-all">
+                <div class="relative">
+                    <button onclick="document.getElementById('botList').classList.toggle('hidden')" class="flex items-center gap-3 bg-[#f8fafc] border border-[#e2e8f0] px-4 py-2 rounded-xl text-sm font-semibold text-[#1e293b] hover:border-blue-300 transition-all">
                         <div class="w-2 h-2 rounded-full <?= $currentBot ? 'bg-[#10b981]' : 'bg-gray-300' ?>"></div>
                         <?= $currentBot ? htmlspecialchars($currentBot['name']) : 'انتخاب بات' ?>
                         <?= render_icon('chevron-down', 'text-[10px] text-[#64748b]') ?>
                     </button>
-                    <div class="absolute top-full right-0 mt-2 w-56 bg-white border border-[#e2e8f0] rounded-xl shadow-xl hidden group-hover:block z-50">
+                    <div id="botList" class="absolute top-full right-0 mt-2 w-56 bg-white border border-[#e2e8f0] rounded-xl shadow-xl hidden z-50">
                         <div class="p-2 flex flex-col gap-1">
                             <?php foreach ($bots as $b): ?>
                                 <a href="?switch_bot=<?= $b['id'] ?>" class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-[#eff6ff] transition-colors <?= $b['id'] == ($_SESSION['selected_bot_id'] ?? 0) ? 'bg-[#eff6ff] text-blue-600' : 'text-[#475569]' ?>">
@@ -74,12 +75,21 @@ function url($path = '') {
                             <?php endforeach; ?>
                             <div class="border-t border-[#f1f5f9] mt-1 pt-1">
                                 <a href="bots.php" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50">
-                                    <?= render_icon('plus', 'text-sm') ?> افزودن بات جدید
+                                    <?= render_icon('plus', 'text-sm') ?> مدیریت بات‌ها
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <script>
+                window.addEventListener('click', function(e) {
+                    const menu = document.getElementById('botList');
+                    if (!menu.contains(e.target) && !e.target.closest('button')) {
+                        menu.classList.add('hidden');
+                    }
+                });
+                </script>
 
                 <div class="bg-[#dcfce7] text-[#166534] px-3 py-1 rounded-full text-xs font-semibold">
                     وضعیت بات: <?= $currentBot ? 'متصل' : 'نامشخص' ?>

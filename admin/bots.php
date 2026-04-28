@@ -1,11 +1,14 @@
 <?php
-require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/BotManager.php';
+require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/classes/Auth.php';
+
+$auth = new Auth();
+$auth->requireLogin();
 
 $botManager = new BotManager();
 $bots = $botManager->getBots();
 
-$message = '';
 if (isset($_POST['add_bot'])) {
     $name = $_POST['name'];
     $token = $_POST['token'];
@@ -20,6 +23,8 @@ if (isset($_GET['delete'])) {
     header("Location: bots.php?deleted=1");
     exit;
 }
+
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="flex justify-between items-center mb-6">
