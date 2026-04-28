@@ -45,9 +45,7 @@ class BotManager {
             try { $this->db->exec("ALTER TABLE `settings` ADD UNIQUE KEY `bot_setting` (`bot_id`, `setting_key`) "); } catch(PDOException $ex) {}
         } catch(PDOException $e) {}
 
-        if (!is_dir(dirname(__DIR__) . '/bots')) {
-            $this->syncPhysicalBots();
-        }
+        $this->syncPhysicalBots();
     }
 
     private function syncPhysicalBots() {
@@ -96,10 +94,21 @@ class BotManager {
         }
         
         $webhookFile = $botDir . '/webhook.php';
-        if (!file_exists($webhookFile)) {
-            $content = "<?php\n/**\n * Auto-generated webhook handler for @{$bot_username}\n */\n\$bot_user = '{$bot_username}';\nrequire_once '../../webhook.php';\n";
-            file_put_contents($webhookFile, $content);
-        }
+        $pretty_username = '@' . $bot_username;
+        $content = "<?php
+/**
+ * Bale Bot Webhook Handler
+ * Generated for: {$pretty_username}
+ */
+
+// Pass the bot username to the core webhook logic
+\$_GET['bot_user'] = '{$bot_username}';
+
+// Include the core webhook processing logic
+require_once realpath(__DIR__ . '/../../webhook.php');
+";
+        // Always overwrite to ensure latest logic
+        file_put_contents($webhookFile, $content);
     }
 
     public function createBot($name, $username, $token) {

@@ -8,8 +8,10 @@ require_once __DIR__ . '/classes/BotManager.php';
 require_once __DIR__ . '/classes/Logger.php';
 
 // Determine Bot ID
-$bot_id = $_GET['bot_id'] ?? null;
-$bot_user = $_GET['bot_user'] ?? null;
+// Check if variables are already set by a wrapper file
+$bot_id = $bot_id ?? ($_GET['bot_id'] ?? null);
+$bot_user = $bot_user ?? ($_GET['bot_user'] ?? null);
+
 $botManager = new BotManager();
 
 if ($bot_id) {

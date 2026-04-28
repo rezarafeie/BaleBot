@@ -1,4 +1,4 @@
-<aside id="sidebar" class="w-[260px] bg-white border-l border-[#e2e8f0] flex-col shadow-sm fixed inset-y-0 right-0 z-[60] transition-transform duration-300 translate-x-full md:translate-x-0 md:relative md:flex shrink-0">
+<aside id="sidebar" class="w-[260px] bg-white border-l border-[#e2e8f0] flex-col shadow-sm fixed inset-y-0 right-0 z-[60] transition-transform duration-300 -translate-x-full md:translate-x-0 md:relative md:flex shrink-0">
     <div class="p-6 border-b border-[#f1f5f9] flex items-center justify-between">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
@@ -46,16 +46,16 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     
-    if (sidebar.classList.contains('translate-x-full')) {
+    if (sidebar.classList.contains('-translate-x-full')) {
         // Open
-        sidebar.classList.remove('translate-x-full');
+        sidebar.classList.remove('-translate-x-full');
         sidebar.classList.add('translate-x-0');
         overlay.classList.remove('hidden');
         setTimeout(() => overlay.classList.add('opacity-100'), 10);
     } else {
         // Close
         sidebar.classList.remove('translate-x-0');
-        sidebar.classList.add('translate-x-full');
+        sidebar.classList.add('-translate-x-full');
         overlay.classList.remove('opacity-100');
         setTimeout(() => overlay.classList.add('hidden'), 300);
     }
