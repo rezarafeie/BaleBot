@@ -1,7 +1,14 @@
 <?php
-require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../classes/RegistrationManager.php';
-require_once __DIR__ . '/../classes/EventManager.php';
+require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/classes/Auth.php';
+require_once dirname(__DIR__) . '/classes/RegistrationManager.php';
+require_once dirname(__DIR__) . '/classes/EventManager.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$auth = new Auth();
+$auth->requireLogin();
 
 $rm = new RegistrationManager();
 $em = new EventManager();
@@ -15,22 +22,77 @@ if (isset($_GET['delete'])) {
     echo "<script>window.location='registrations.php" . ($filter_event ? "?event_id=$filter_event" : "") . "';</script>";
     exit;
 }
+
+if (isset($_GET['export_csv'])) {
+    // Make sure no HTML output
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="registrations_' . date('Y-m-d_H-i') . '.csv"');
+    
+    echo "\xEF\xBB\xBF";
+    
+    $fp = fopen('php://output', 'w');
+    
+    $dynamic_keys = [];
+    $parsed_answers = [];
+    foreach ($registrations as $r) {
+        $ans = json_decode($r['answers_json'], true) ?: [];
+        $parsed_answers[$r['id']] = $ans;
+        foreach (array_keys($ans) as $k) {
+            if (!in_array($k, $dynamic_keys)) {
+                $dynamic_keys[] = $k;
+            }
+        }
+    }
+    
+    $headers = ['شناسه', 'رویداد', 'نام', 'شماره تماس', 'شناسه کاربری', 'تاریخ ثبت‌نام'];
+    foreach ($dynamic_keys as $dk) {
+        $headers[] = $dk;
+    }
+    fputcsv($fp, $headers);
+    
+    foreach ($registrations as $r) {
+        $row = [
+            $r['id'],
+            $r['event_title'],
+            $r['user_name'] ?? '-',
+            $r['user_phone'] ?? '-',
+            $r['chat_id'],
+            $r['created_at']
+        ];
+        $ans = $parsed_answers[$r['id']];
+        foreach ($dynamic_keys as $dk) {
+            $val = isset($ans[$dk]) ? (is_array($ans[$dk]) ? json_encode($ans[$dk], JSON_UNESCAPED_UNICODE) : $ans[$dk]) : '';
+            $row[] = $val;
+        }
+        fputcsv($fp, $row);
+    }
+    fclose($fp);
+    exit;
+}
+
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="flex justify-between items-center bg-white p-5 rounded-xl border border-[#e2e8f0] mb-6">
     <h1 class="text-lg font-semibold text-[#1e293b]">ثبت‌نام‌ها</h1>
     
-    <form method="GET" class="flex items-center gap-2">
-        <select name="event_id" class="border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#334155] focus:outline-none focus:border-blue-500" onchange="this.form.submit()">
-            <option value="">همه رویدادها</option>
-            <?php foreach ($events as $e): ?>
-                <option value="<?= $e['id'] ?>" <?= $filter_event == $e['id'] ? 'selected' : '' ?>><?= htmlspecialchars($e['title']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <?php if ($filter_event): ?>
-           <a href="registrations.php" class="text-[#64748b] text-sm hover:text-red-500">✕</a>
-        <?php endif; ?>
-    </form>
+    <div class="flex items-center gap-3">
+        <form method="GET" class="flex items-center gap-2">
+            <select name="event_id" class="border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#334155] focus:outline-none focus:border-blue-500" onchange="this.form.submit()">
+                <option value="">همه رویدادها</option>
+                <?php foreach ($events as $e): ?>
+                    <option value="<?= $e['id'] ?>" <?= $filter_event == $e['id'] ? 'selected' : '' ?>><?= htmlspecialchars($e['title']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if ($filter_event): ?>
+               <a href="registrations.php" class="text-[#64748b] text-sm hover:text-red-500">✕</a>
+            <?php endif; ?>
+        </form>
+        <a href="?export_csv=1<?= $filter_event ? '&event_id='.$filter_event : '' ?>" class="bg-[#10b981] hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg text-[13px] transition-colors whitespace-nowrap">
+            دانلود فایل اکسل (CSV)
+        </a>
+    </div>
 </div>
 
 <div class="bg-white rounded-xl border border-[#e2e8f0] overflow-x-auto">

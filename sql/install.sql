@@ -76,6 +76,49 @@ CREATE TABLE IF NOT EXISTS `registrations` (
   KEY `chat_id` (`chat_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `registration_answers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `registration_id` int(11) NOT NULL,
+  `field_key` varchar(255) NOT NULL,
+  `field_value` text,
+  PRIMARY KEY (`id`),
+  KEY `registration_id` (`registration_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `media_files` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `file_path` varchar(255) NOT NULL,
+  `file_type` varchar(50) NOT NULL,
+  `file_size` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `bale_file_id` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `broadcasts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `target_type` varchar(50) NOT NULL,
+  `target_event_id` int(11) DEFAULT NULL,
+  `message_text` text NOT NULL,
+  `media_id` int(11) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'pending',
+  `total_recipients` int(11) DEFAULT 0,
+  `sent_count` int(11) DEFAULT 0,
+  `failed_count` int(11) DEFAULT 0,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `broadcast_recipients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `broadcast_id` int(11) NOT NULL,
+  `chat_id` varchar(50) NOT NULL,
+  `status` varchar(50) DEFAULT 'sent',
+  PRIMARY KEY (`id`),
+  KEY `broadcast_id` (`broadcast_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS `settings` (
   `setting_key` varchar(100) NOT NULL,
   `setting_value` text,

@@ -12,6 +12,17 @@ class MediaManager {
         if (!is_dir($this->uploadDir)) {
             mkdir($this->uploadDir, 0755, true);
         }
+        
+        $this->db->exec("CREATE TABLE IF NOT EXISTS `media_files` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `file_path` varchar(255) NOT NULL,
+          `file_type` varchar(50) NOT NULL,
+          `file_size` int(11) NOT NULL,
+          `title` varchar(255) NOT NULL,
+          `bale_file_id` varchar(255) DEFAULT NULL,
+          `created_at` datetime NOT NULL,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     }
 
     public function getAllMedia() {

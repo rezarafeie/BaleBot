@@ -10,6 +10,29 @@ class BroadcastManager {
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
         $this->bot = new BaleBot();
+        
+        $this->db->exec("CREATE TABLE IF NOT EXISTS `broadcasts` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `target_type` varchar(50) NOT NULL,
+          `target_event_id` int(11) DEFAULT NULL,
+          `message_text` text NOT NULL,
+          `media_id` int(11) DEFAULT NULL,
+          `status` varchar(50) DEFAULT 'pending',
+          `total_recipients` int(11) DEFAULT 0,
+          `sent_count` int(11) DEFAULT 0,
+          `failed_count` int(11) DEFAULT 0,
+          `created_at` datetime NOT NULL,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        
+        $this->db->exec("CREATE TABLE IF NOT EXISTS `broadcast_recipients` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `broadcast_id` int(11) NOT NULL,
+          `chat_id` varchar(50) NOT NULL,
+          `status` varchar(50) DEFAULT 'sent',
+          PRIMARY KEY (`id`),
+          KEY `broadcast_id` (`broadcast_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     }
 
     public function createBroadcast($target_type, $event_id, $message_text, $media_id = null) {
