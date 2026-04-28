@@ -8,7 +8,7 @@
                 <?= $currentBot ? htmlspecialchars($currentBot['name']) : 'پنل مدیریت بله' ?>
             </h1>
         </div>
-        <button onclick="toggleSidebar()" class="md:hidden text-gray-500 font-bold">✕</button>
+        <button onclick="toggleSidebar()" class="md:hidden text-gray-500 font-bold p-2">✕</button>
     </div>
     
     <nav class="p-4 flex-grow overflow-y-auto">
@@ -39,14 +39,24 @@
     </div>
 </aside>
 
-<!-- Overlay for mobile -->
-<div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-[55] hidden md:hidden"></div>
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-[55] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
 
 <script>
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.toggle('translate-x-full');
-    overlay.classList.toggle('hidden');
+    const isHidden = sidebar.classList.contains('translate-x-full');
+    
+    if (isHidden) {
+        sidebar.classList.remove('translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.add('opacity-100'), 10);
+    } else {
+        sidebar.classList.add('translate-x-full');
+        sidebar.classList.remove('translate-x-0');
+        overlay.classList.remove('opacity-100');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+    }
 }
 </script>

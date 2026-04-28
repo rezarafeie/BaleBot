@@ -50,8 +50,10 @@ require_once __DIR__ . '/../includes/header.php';
             <?php 
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
             $host = $_SERVER['HTTP_HOST'];
-            $dir = dirname($_SERVER['PHP_SELF']);
-            $baseUrl = $protocol . "://" . $host . rtrim(dirname($dir), '/');
+            $dir = dirname($_SERVER['PHP_SELF']); // /admin
+            $parentDir = dirname($dir); // /
+            if ($parentDir === DIRECTORY_SEPARATOR) $parentDir = '';
+            $baseUrl = $protocol . "://" . $host . $parentDir;
             ?>
             <?php foreach ($bots as $bot): ?>
             <tr class="border-b border-[#f8fafc] hover:bg-[#fbfcfd] transition-colors">
@@ -60,10 +62,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <td class="p-4 text-[#64748b]">@<?= htmlspecialchars($bot['username']) ?></td>
                 <td class="p-4">
                     <div class="flex items-center gap-2">
-                        <code class="bg-gray-100 px-2 py-1 rounded text-[10px] text-blue-600 truncate max-w-[200px]" title="<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>&secret=<?= WEBHOOK_SECRET ?>">
-                            .../webhook.php?bot_user=<?= $bot['username'] ?>&secret=...
+                        <?php $prettyUrl = $baseUrl . "/bot/" . $bot['username'] . "/webhook.php"; ?>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-[10px] text-blue-600 truncate max-w-[200px]" title="<?= $prettyUrl ?>">
+                            .../bot/<?= $bot['username'] ?>/webhook.php
                         </code>
-                        <button onclick="navigator.clipboard.writeText('<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>&secret=<?= WEBHOOK_SECRET ?>'); alert('کپی شد!')" class="text-xs text-blue-500 hover:underline">کپی</button>
+                        <button onclick="navigator.clipboard.writeText('<?= $prettyUrl ?>'); alert('کپی شد!')" class="text-xs text-blue-500 hover:underline">کپی</button>
                     </div>
                 </td>
                 <td class="p-4 text-[#64748b]"><?= explode(' ', $bot['created_at'])[0] ?></td>

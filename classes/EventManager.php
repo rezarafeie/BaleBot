@@ -89,6 +89,12 @@ class EventManager {
         return $stmt->fetchAll();
     }
 
+    public function getActiveEvents($bot_id) {
+        $stmt = $this->db->prepare("SELECT * FROM events WHERE bot_id = ? AND is_active = 1");
+        $stmt->execute([$bot_id]);
+        return $stmt->fetchAll();
+    }
+
     public function getEvent($id) {
         $stmt = $this->db->prepare("SELECT * FROM events WHERE id = ?");
         $stmt->execute([$id]);
