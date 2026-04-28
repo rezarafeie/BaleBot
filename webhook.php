@@ -25,6 +25,8 @@ if (!$botData) {
     exit("Bot not found");
 }
 
+$bot_id = $botData['id']; // Update global bot_id from found data
+
 // Security check
 if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
     http_response_code(403);

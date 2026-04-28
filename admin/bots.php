@@ -60,10 +60,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <td class="p-4 text-[#64748b]">@<?= htmlspecialchars($bot['username']) ?></td>
                 <td class="p-4">
                     <div class="flex items-center gap-2">
-                        <code class="bg-gray-100 px-2 py-1 rounded text-[10px] text-blue-600 truncate max-w-[200px]" title="<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>">
-                            .../webhook.php?bot_user=<?= $bot['username'] ?>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-[10px] text-blue-600 truncate max-w-[200px]" title="<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>&secret=<?= WEBHOOK_SECRET ?>">
+                            .../webhook.php?bot_user=<?= $bot['username'] ?>&secret=...
                         </code>
-                        <button onclick="navigator.clipboard.writeText('<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>'); alert('کپی شد!')" class="text-xs text-blue-500 hover:underline">کپی</button>
+                        <button onclick="navigator.clipboard.writeText('<?= $baseUrl ?>/webhook.php?bot_user=<?= $bot['username'] ?>&secret=<?= WEBHOOK_SECRET ?>'); alert('کپی شد!')" class="text-xs text-blue-500 hover:underline">کپی</button>
                     </div>
                 </td>
                 <td class="p-4 text-[#64748b]"><?= explode(' ', $bot['created_at'])[0] ?></td>
