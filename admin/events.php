@@ -1,6 +1,10 @@
 <?php
-require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../classes/EventManager.php';
+require_once dirname(__DIR__) . '/config.php';
+require_once dirname(__DIR__) . '/classes/Auth.php';
+require_once dirname(__DIR__) . '/classes/EventManager.php';
+
+$auth = new Auth();
+$auth->requireLogin();
 
 $em = new EventManager();
 
@@ -29,6 +33,8 @@ if (isset($_GET['copy_to']) && isset($_GET['bot_id'])) {
     }
     exit;
 }
+
+require_once __DIR__ . '/../includes/header.php';
 
 $events = $em->getAllEvents();
 ?>

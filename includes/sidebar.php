@@ -1,9 +1,14 @@
-<aside class="w-[260px] bg-white border-l border-[#e2e8f0] flex-col shadow-sm hidden md:flex shrink-0">
-    <div class="p-6 border-b border-[#f1f5f9]">
+<aside id="sidebar" class="w-[260px] bg-white border-l border-[#e2e8f0] flex-col shadow-sm fixed inset-y-0 right-0 z-[60] transform translate-x-full transition-transform duration-300 md:relative md:translate-x-0 md:flex shrink-0">
+    <div class="p-6 border-b border-[#f1f5f9] flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">B</div>
-            <h1 class="text-[18px] font-bold text-[#1e293b]">پنل مدیریت بله</h1>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <?= $currentBot ? mb_substr($currentBot['name'], 0, 1) : 'B' ?>
+            </div>
+            <h1 class="text-[16px] font-bold text-[#1e293b] truncate">
+                <?= $currentBot ? htmlspecialchars($currentBot['name']) : 'پنل مدیریت بله' ?>
+            </h1>
         </div>
+        <button onclick="toggleSidebar()" class="md:hidden text-gray-500 font-bold">✕</button>
     </div>
     
     <nav class="p-4 flex-grow overflow-y-auto">
@@ -33,3 +38,15 @@
         نسخه ۱.۴.۲ - محلی
     </div>
 </aside>
+
+<!-- Overlay for mobile -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-[55] hidden md:hidden"></div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+</script>

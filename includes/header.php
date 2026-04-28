@@ -54,8 +54,13 @@ function url($path = '') {
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-y-auto w-full">
         <!-- Top bar -->
-        <header class="h-[80px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-8 shrink-0">
-            <div class="flex items-center gap-6">
+        <header class="h-[80px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-6 md:px-8 shrink-0">
+            <div class="flex items-center gap-4 md:gap-6">
+                <!-- Burger Menu Mobile -->
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+                    <?= render_icon('list', 'text-2xl') ?>
+                </button>
+
                 <!-- Bot Switcher -->
                 <div class="relative">
                     <button onclick="document.getElementById('botList').classList.toggle('hidden')" class="flex items-center gap-3 bg-[#f8fafc] border border-[#e2e8f0] px-4 py-2 rounded-xl text-sm font-semibold text-[#1e293b] hover:border-blue-300 transition-all">
