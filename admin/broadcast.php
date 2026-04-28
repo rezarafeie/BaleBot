@@ -5,11 +5,14 @@ require_once __DIR__ . '/../classes/BroadcastManager.php';
 require_once __DIR__ . '/../classes/Database.php';
 
 $db = Database::getInstance()->getConnection();
+$bot_id = $_SESSION['selected_bot_id'] ?? 1;
 $em = new EventManager();
 $bm = new BroadcastManager();
 
 $events = $em->getAllEvents();
-$media_list = $db->query("SELECT * FROM media_files ORDER BY id DESC")->fetchAll();
+$stmt = $db->prepare("SELECT * FROM media_files WHERE bot_id = ? ORDER BY id DESC");
+$stmt->execute([$bot_id]);
+$media_list = $stmt->fetchAll();
 
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_broadcast'])) {
@@ -18,14 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_broadcast'])) {
     $message_text = $_POST['message_text'];
     $media_id = $_POST['media_id'] ?: null;
 
-    $broadcast_id = $bm->createBroadcast($target_type, $target_event_id, $message_text, $media_id);
+    $broadcast_id = $bm->createBroadcast($target_type, $target_event_id, $message_text, $media_id, $bot_id);
     // Process sync for simplicity (ideally this should be dispatched via cron for large lists to avoid timeout)
     $bm->processBroadcast($broadcast_id);
     
     $msg = "پیام با موفقیت در صف ارسال قرار گرفت و ارسال شد.";
 }
 
-$history = $db->query("SELECT b.*, e.title as event_title FROM broadcasts b LEFT JOIN events e ON b.target_event_id = e.id ORDER BY b.id DESC LIMIT 20")->fetchAll();
+$stmt = $db->prepare("SELECT b.*, e.title as event_title FROM broadcasts b LEFT JOIN events e ON b.target_event_id = e.id WHERE b.bot_id = ? ORDER BY b.id DESC LIMIT 20");
+$stmt->execute([$bot_id]);
+$history = $stmt->fetchAll();
 ?>
 
 <div class="bg-white p-5 rounded-xl border border-[#e2e8f0] mb-6">

@@ -4,7 +4,18 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/BaleBot.php';
 require_once __DIR__ . '/classes/EventManager.php';
 require_once __DIR__ . '/classes/RegistrationManager.php';
+require_once __DIR__ . '/classes/BotManager.php';
 require_once __DIR__ . '/classes/Logger.php';
+
+// Determine Bot ID
+$bot_id = $_GET['bot_id'] ?? 1;
+$botManager = new BotManager();
+$botData = $botManager->getBot($bot_id);
+
+if (!$botData) {
+    http_response_code(404);
+    exit("Bot not found");
+}
 
 // Security check
 if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
@@ -14,7 +25,7 @@ if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
 
 $input = file_get_contents('php://input');
 if (trim($input)) {
-    Logger::log('webhook', 'Incoming webhook', json_decode($input, true) ?: ['raw' => $input]);
+    Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', json_decode($input, true) ?: ['raw' => $input]);
 }
 $update = json_decode($input, true);
 
@@ -23,14 +34,14 @@ if (!$update) {
     exit;
 }
 
-$bot = new BaleBot();
+$bot = new BaleBot($botData['token']);
 $eventManager = new EventManager();
 $regManager = new RegistrationManager();
 
 $db = Database::getInstance()->getConnection();
 
 // Load event cache
-$eventCache = $eventManager->getCachedData();
+$eventCache = $eventManager->getCachedData($bot_id);
 
 try {
     if (isset($update['message'])) {
@@ -45,7 +56,7 @@ try {
 http_response_code(200);
 
 function handleMessage($msg) {
-    global $bot, $eventManager, $regManager, $db, $eventCache;
+    global $bot, $eventManager, $regManager, $db, $eventCache, $bot_id;
 
     $chat_id = $msg['chat']['id'] ?? null;
     if (!$chat_id) return;
@@ -55,9 +66,9 @@ function handleMessage($msg) {
     $username = $msg['from']['username'] ?? null;
     
     // Log user
-    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username);
+    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id);
 
-    $stateInfo = $regManager->getUserState($chat_id);
+    $stateInfo = $regManager->getUserState($chat_id, $bot_id);
     $status = $stateInfo['status'] ?? 'idle';
     $current_event_id = $stateInfo['current_event_id'] ?? null;
     $current_step = $stateInfo['current_step_index'] ?? 0;
@@ -67,7 +78,7 @@ function handleMessage($msg) {
     $text = $msg['text'] ?? '';
     if (strpos($text, '/start ') === 0) {
         $param = trim(substr($text, 7));
-        $regManager->clearState($chat_id);
+        $regManager->clearState($chat_id, $bot_id);
         
         $foundEvent = null;
         if (isset($eventCache['slug_' . $param])) {
@@ -94,7 +105,7 @@ function handleMessage($msg) {
     }
 
     if ($text === '/start' || $text === 'انصراف' || $text === '/cancel') {
-        $regManager->clearState($chat_id);
+        $regManager->clearState($chat_id, $bot_id);
         sendEventSelection($chat_id);
         return;
     }
@@ -107,7 +118,7 @@ function handleMessage($msg) {
 }
 
 function handleCallbackQuery($cq) {
-    global $bot, $eventManager, $regManager, $eventCache;
+    global $bot, $eventManager, $regManager, $eventCache, $bot_id;
 
     $chat_id = $cq['message']['chat']['id'] ?? null;
     $data = $cq['data'] ?? '';
@@ -128,7 +139,7 @@ function handleCallbackQuery($cq) {
             $step_index = $parts[2];
             $opt_idx = $parts[3];
             
-            $stateInfo = $regManager->getUserState($chat_id);
+            $stateInfo = $regManager->getUserState($chat_id, $bot_id);
             if ($stateInfo && ($stateInfo['status'] ?? '') === 'registering' && 
                 ($stateInfo['current_event_id'] ?? null) == $event_id && 
                 ($stateInfo['current_step_index'] ?? 0) == $step_index) {
@@ -154,7 +165,7 @@ function handleCallbackQuery($cq) {
 }
 
 function sendEventSelection($chat_id) {
-    global $bot, $eventManager, $eventCache;
+    global $bot, $eventManager, $eventCache, $bot_id;
     
     $events = [];
     foreach ($eventCache as $k => $v) {
@@ -179,7 +190,8 @@ function sendEventSelection($chat_id) {
     }
     
     global $db;
-    $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text'");
+    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text' AND bot_id = ?");
+    $stmt->execute([$bot_id]);
     $setting_text = $stmt->fetchColumn();
     
     $message = $setting_text ?: "سلام 👋\nبه سامانه ثبتنام خوش آمدید.\nبرای شروع، لطفاً رویداد موردنظر خود را انتخاب کنید.";
@@ -188,7 +200,7 @@ function sendEventSelection($chat_id) {
 }
 
 function startEvent($chat_id, $event) {
-    global $bot, $regManager, $eventManager;
+    global $bot, $regManager, $eventManager, $bot_id;
 
     // Check duplicate
     if ($regManager->checkDuplicate($chat_id, $event['id'], $event['duplicate_setting'])) {
@@ -202,7 +214,7 @@ function startEvent($chat_id, $event) {
         $bot->sendMessage($chat_id, $event['welcome_message'], ['remove_keyboard' => true]);
     }
 
-    $regManager->setState($chat_id, $event['id'], 0, json_encode([]), 'registering');
+    $regManager->setState($chat_id, $event['id'], 0, json_encode([]), 'registering', $bot_id);
     
     // Trigger first step
     askStep($chat_id, $event['id'], 0, []);
@@ -270,7 +282,7 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
 }
 
 function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answers) {
-    global $bot, $eventManager, $regManager, $eventCache;
+    global $bot, $eventManager, $regManager, $eventCache, $bot_id;
     $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
     $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
     
@@ -322,25 +334,27 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
     $answers[$field['field_key']] = $value;
     
     $step_index++;
-    $regManager->setState($chat_id, $event_id, $step_index, json_encode($answers, JSON_UNESCAPED_UNICODE), 'registering');
+    $regManager->setState($chat_id, $event_id, $step_index, json_encode($answers, JSON_UNESCAPED_UNICODE), 'registering', $bot_id);
 
     if ($step_index < count($fields)) {
         askStep($chat_id, $event_id, $step_index, $answers);
     } else {
         // Registration complete
-        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE));
-        $regManager->clearState($chat_id);
+        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE), $bot_id);
+        $regManager->clearState($chat_id, $bot_id);
         
         // Trigger completion actions if configured
         triggerCompletionAction($event, $answers, $chat_id);
         
         if ($event['use_ai']) {
             global $db;
-            $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key'");
+            $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key' AND bot_id = ?");
+            $stmt->execute([$bot_id]);
             $apiKey = $stmt->fetchColumn();
             
             if ($apiKey) {
                 $waitMsg = !empty(trim($event['ai_wait_message'])) ? $event['ai_wait_message'] : "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳";
+                $waitMsg = replacePlaceholders($waitMsg, $answers);
                 $bot->sendMessage($chat_id, $waitMsg, ['remove_keyboard' => true]);
                 
                 $aiPrompt = replacePlaceholders($event['ai_prompt'] ?? '', $answers);

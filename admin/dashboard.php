@@ -3,13 +3,27 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/Database.php';
 
 $db = Database::getInstance()->getConnection();
+$bot_id = $_SESSION['selected_bot_id'] ?? 1;
 
-$total_users = $db->query("SELECT COUNT(*) FROM bot_users")->fetchColumn();
-$total_events = $db->query("SELECT COUNT(*) FROM events")->fetchColumn();
-$total_regs = $db->query("SELECT COUNT(*) FROM registrations")->fetchColumn();
-$today_regs = $db->query("SELECT COUNT(*) FROM registrations WHERE DATE(created_at) = CURDATE()")->fetchColumn();
+$total_users = $db->prepare("SELECT COUNT(*) FROM bot_users WHERE bot_id = ?");
+$total_users->execute([$bot_id]);
+$total_users = $total_users->fetchColumn();
 
-$recent = $db->query("SELECT r.*, e.title as event_title, u.name as user_name FROM registrations r JOIN events e ON r.event_id = e.id LEFT JOIN bot_users u ON r.chat_id = u.chat_id ORDER BY r.id DESC LIMIT 5")->fetchAll();
+$total_events = $db->prepare("SELECT COUNT(*) FROM events WHERE bot_id = ?");
+$total_events->execute([$bot_id]);
+$total_events = $total_events->fetchColumn();
+
+$total_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE bot_id = ?");
+$total_regs->execute([$bot_id]);
+$total_regs = $total_regs->fetchColumn();
+
+$today_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE DATE(created_at) = CURDATE() AND bot_id = ?");
+$today_regs->execute([$bot_id]);
+$today_regs = $today_regs->fetchColumn();
+
+$stmt = $db->prepare("SELECT r.*, e.title as event_title, u.name as user_name FROM registrations r JOIN events e ON r.event_id = e.id LEFT JOIN bot_users u ON r.chat_id = u.chat_id AND r.bot_id = u.bot_id WHERE r.bot_id = ? ORDER BY r.id DESC LIMIT 5");
+$stmt->execute([$bot_id]);
+$recent = $stmt->fetchAll();
 ?>
 
 <!-- Stats Grid -->

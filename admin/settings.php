@@ -5,19 +5,23 @@ require_once __DIR__ . '/../classes/Auth.php';
 
 $auth = new Auth();
 $db = Database::getInstance()->getConnection();
-$bot = new BaleBot();
+$bot_id = $_SESSION['selected_bot_id'] ?? 1;
+
+$botData = (new BotManager())->getBot($bot_id);
+$bot = new BaleBot($botData['token'] ?? null);
 
 $msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['set_webhook'])) {
         $url = $_POST['webhook_url'];
-        $db->prepare("UPDATE settings SET setting_value = ? WHERE setting_key = 'webhook_url'")->execute([$url]);
-        $res = $bot->setWebhook($url . "?secret=" . WEBHOOK_SECRET);
+        $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'webhook_url', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$bot_id, $url, $url]);
+        $res = $bot->setWebhook($url . "?bot_id=" . $bot_id . "&secret=" . WEBHOOK_SECRET);
         $msg = "وب‌هوک ست شد. وضعیت: " . (isset($res['ok']) && $res['ok'] ? 'موفق' : 'ناموفق');
     } elseif (isset($_POST['delete_webhook'])) {
         $res = $bot->deleteWebhook();
-        $db->prepare("UPDATE settings SET setting_value = '' WHERE setting_key = 'webhook_url'")->execute();
+        $db->prepare("UPDATE settings SET setting_value = '' WHERE setting_key = 'webhook_url' AND bot_id = ?")->execute([$bot_id]);
         $msg = "وب‌هوک غیرفعال شد. وضعیت: " . (isset($res['ok']) && $res['ok'] ? 'موفق' : 'ناموفق');
     } elseif (isset($_POST['change_pass'])) {
         if (!empty($_POST['new_pass'])) {
@@ -26,25 +30,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['save_gapgpt'])) {
         $key = $_POST['gapgpt_api_key'] ?? '';
-        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('gapgpt_api_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
-        $stmt->execute([$key, $key]);
+        $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_api_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$bot_id, $key, $key]);
         $msg = "کلید API GapGPT ذخیره شد.";
     } elseif (isset($_POST['save_event_selection'])) {
         $text = $_POST['event_selection_text'] ?? '';
-        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('event_selection_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
-        $stmt->execute([$text, $text]);
+        $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'event_selection_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$bot_id, $text, $text]);
         $msg = "متن پیش‌فرض انتخاب رویداد ذخیره شد.";
     }
 }
 
 // Get current setting
-$stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'webhook_url'");
+$stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'webhook_url' AND bot_id = ?");
+$stmt->execute([$bot_id]);
 $current_webhook = $stmt->fetchColumn() ?: '';
 
-$stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key'");
+$stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key' AND bot_id = ?");
+$stmt->execute([$bot_id]);
 $current_gapgpt_key = $stmt->fetchColumn() ?: '';
 
-$stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text'");
+$stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text' AND bot_id = ?");
+$stmt->execute([$bot_id]);
 $current_event_selection_text = $stmt->fetchColumn() ?: '';
 
 // Determine what URL should be auto-filled

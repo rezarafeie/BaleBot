@@ -35,18 +35,27 @@ class BroadcastManager {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     }
 
-    public function createBroadcast($target_type, $event_id, $message_text, $media_id = null) {
-        $stmt = $this->db->prepare("INSERT INTO broadcasts (target_type, target_event_id, message_text, media_id, status, created_at) VALUES (?, ?, ?, ?, 'pending', NOW())");
-        $stmt->execute([$target_type, $event_id, $message_text, $media_id]);
+    public function createBroadcast($target_type, $event_id, $message_text, $media_id = null, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $stmt = $this->db->prepare("INSERT INTO broadcasts (bot_id, target_type, target_event_id, message_text, media_id, status, created_at) VALUES (?, ?, ?, ?, ?, 'pending', NOW())");
+        $stmt->execute([$bot_id, $target_type, $event_id, $message_text, $media_id]);
         return $this->db->lastInsertId();
     }
 
-    public function getRecipients($target_type, $event_id = null) {
+    public function getRecipients($target_type, $event_id = null, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+
         if ($target_type === 'all') {
-            return $this->db->query("SELECT chat_id FROM bot_users")->fetchAll(PDO::FETCH_COLUMN);
+            $stmt = $this->db->prepare("SELECT chat_id FROM bot_users WHERE bot_id = ?");
+            $stmt->execute([$bot_id]);
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
         } elseif ($target_type === 'event' && $event_id) {
-            $stmt = $this->db->prepare("SELECT DISTINCT chat_id FROM registrations WHERE event_id = ? AND status = 'completed'");
-            $stmt->execute([$event_id]);
+            $stmt = $this->db->prepare("SELECT DISTINCT chat_id FROM registrations WHERE event_id = ? AND bot_id = ? AND status = 'completed'");
+            $stmt->execute([$event_id, $bot_id]);
             return $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
         return [];
@@ -58,9 +67,14 @@ class BroadcastManager {
         $b = $stmt->fetch();
         if (!$b) return false;
 
+        $bot_id = $b['bot_id'];
+        require_once __DIR__ . '/BotManager.php';
+        $botData = (new BotManager())->getBot($bot_id);
+        $bot = new BaleBot($botData['token'] ?? null);
+
         $this->db->prepare("UPDATE broadcasts SET status = 'sending' WHERE id = ?")->execute([$broadcast_id]);
         
-        $recipients = $this->getRecipients($b['target_type'], $b['target_event_id']);
+        $recipients = $this->getRecipients($b['target_type'], $b['target_event_id'], $bot_id);
         $total = count($recipients);
         $this->db->prepare("UPDATE broadcasts SET total_recipients = ? WHERE id = ?")->execute([$total, $broadcast_id]);
 
@@ -82,16 +96,16 @@ class BroadcastManager {
                 $file = $mediaFile['bale_file_id'] ?: new CURLFile(dirname(__DIR__) . '/' . ltrim($mediaFile['file_path'], '/'));
                 
                 if ($mediaFile['file_type'] === 'photo') {
-                    $res = $this->bot->sendPhoto($chat_id, $file, $b['message_text']);
+                    $res = $bot->sendPhoto($chat_id, $file, $b['message_text']);
                 } elseif ($mediaFile['file_type'] === 'video') {
-                    $res = $this->bot->sendVideo($chat_id, $file, $b['message_text']);
+                    $res = $bot->sendVideo($chat_id, $file, $b['message_text']);
                 } elseif ($mediaFile['file_type'] === 'document') {
-                    $res = $this->bot->sendDocument($chat_id, $file, $b['message_text']);
+                    $res = $bot->sendDocument($chat_id, $file, $b['message_text']);
                 } elseif ($mediaFile['file_type'] === 'voice') {
-                    $res = $this->bot->sendVoice($chat_id, $file, $b['message_text']);
+                    $res = $bot->sendVoice($chat_id, $file, $b['message_text']);
                 }
             } else {
-                $res = $this->bot->sendMessage($chat_id, $b['message_text']);
+                $res = $bot->sendMessage($chat_id, $b['message_text']);
             }
 
             $stat = 'sent';

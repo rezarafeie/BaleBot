@@ -3,12 +3,13 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/MediaManager.php';
 
 $mm = new MediaManager();
+$bot_id = $_SESSION['selected_bot_id'] ?? 1;
 $msg = '';
 $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     try {
-        $mm->uploadFile($_FILES['file'], $_POST['title']);
+        $mm->uploadFile($_FILES['file'], $_POST['title'], $bot_id);
         $msg = "فایل با موفقیت آپلود شد.";
     } catch (Exception $e) {
         $err = $e->getMessage();
@@ -17,11 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 
 if (isset($_GET['delete'])) {
     $mm->deleteMedia($_GET['delete']);
-    echo "<script>window.location='media.php';</script>";
+    header("Location: media.php");
     exit;
 }
 
-$media = $mm->getAllMedia();
+$media = $mm->getAllMedia($bot_id);
 ?>
 
 <div class="bg-white p-5 rounded-xl border border-[#e2e8f0] mb-6">

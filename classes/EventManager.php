@@ -23,8 +23,13 @@ class EventManager {
         } catch(PDOException $e) {}
     }
 
-    public function syncCache() {
-        $events = $this->getAllEvents(true);
+    public function syncCache($bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        if (!$bot_id) return;
+
+        $events = $this->getAllEvents(true, $bot_id);
         $cache = [];
         foreach ($events as $event) {
             $fields = $this->getEventFields($event['id'], true);
@@ -36,29 +41,51 @@ class EventManager {
             }
         }
         
-        $cachePath = dirname(__DIR__) . '/data/events_cache.json';
+        $cachePath = dirname(__DIR__) . "/data/events_cache_{$bot_id}.json";
         if (!is_dir(dirname($cachePath))) {
             @mkdir(dirname($cachePath), 0777, true);
         }
         file_put_contents($cachePath, json_encode($cache, JSON_UNESCAPED_UNICODE));
     }
 
-    public function getCachedData() {
-        $cachePath = dirname(__DIR__) . '/data/events_cache.json';
+    public function getCachedData($bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        if (!$bot_id) return [];
+
+        $cachePath = dirname(__DIR__) . "/data/events_cache_{$bot_id}.json";
         if (file_exists($cachePath)) {
             return json_decode(file_get_contents($cachePath), true);
         }
-        $this->syncCache();
-        return json_decode(file_get_contents($cachePath), true);
+        $this->syncCache($bot_id);
+        return json_decode(file_get_contents($cachePath), true) ?: [];
     }
 
-    public function getAllEvents($activeOnly = false) {
-        $sql = "SELECT * FROM events";
-        if ($activeOnly) {
-            $sql .= " WHERE is_active = 1";
+    public function getAllEvents($activeOnly = false, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
         }
+        $sql = "SELECT * FROM events";
+        $params = [];
+        $where = [];
+        
+        if ($bot_id) {
+            $where[] = "bot_id = ?";
+            $params[] = $bot_id;
+        }
+        
+        if ($activeOnly) {
+            $where[] = "is_active = 1";
+        }
+
+        if (!empty($where)) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
         $sql .= " ORDER BY id DESC";
-        $stmt = $this->db->query($sql);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
@@ -69,8 +96,10 @@ class EventManager {
     }
 
     public function createEvent($data) {
-        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $bot_id = $data['bot_id'] ?? ($_SESSION['selected_bot_id'] ?? 1);
+        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
+            $bot_id,
             $data['title'],
             $data['slug'],
             $data['description'],
@@ -88,7 +117,7 @@ class EventManager {
             $data['action_http_url'] ?? ''
         ]);
         $id = $this->db->lastInsertId();
-        $this->syncCache();
+        $this->syncCache($bot_id);
         return $id;
     }
 
@@ -112,14 +141,20 @@ class EventManager {
             $data['action_http_url'] ?? '',
             $id
         ]);
-        $this->syncCache();
+        $event = $this->getEvent($id);
+        if ($event) {
+            $this->syncCache($event['bot_id']);
+        }
         return $res;
     }
 
     public function deleteEvent($id) {
+        $event = $this->getEvent($id);
         $stmt = $this->db->prepare("DELETE FROM events WHERE id = ?");
         $res = $stmt->execute([$id]);
-        $this->syncCache();
+        if ($event) {
+            $this->syncCache($event['bot_id']);
+        }
         return $res;
     }
 
@@ -156,7 +191,10 @@ class EventManager {
             $data['options_json'],
             1
         ]);
-        $this->syncCache();
+        $event = $this->getEvent($event_id);
+        if ($event) {
+            $this->syncCache($event['bot_id']);
+        }
         return $res;
     }
 
@@ -176,29 +214,57 @@ class EventManager {
             $data['is_active'] ? 1 : 0,
             $id
         ]);
-        $this->syncCache();
+        $field = $this->getEventField($id);
+        if ($field) {
+            $event = $this->getEvent($field['event_id']);
+            if ($event) {
+                $this->syncCache($event['bot_id']);
+            }
+        }
         return $res;
     }
 
     public function toggleFieldActive($id) {
         $stmt = $this->db->prepare("UPDATE event_fields SET is_active = NOT is_active WHERE id = ?");
         $res = $stmt->execute([$id]);
-        $this->syncCache();
+        $field = $this->getEventField($id);
+        if ($field) {
+            $event = $this->getEvent($field['event_id']);
+            if ($event) {
+                $this->syncCache($event['bot_id']);
+            }
+        }
         return $res;
     }
 
     public function deleteField($id) {
+        $field = $this->getEventField($id);
         $stmt = $this->db->prepare("DELETE FROM event_fields WHERE id = ?");
         $res = $stmt->execute([$id]);
-        $this->syncCache();
+        if ($field) {
+            $event = $this->getEvent($field['event_id']);
+            if ($event) {
+                $this->syncCache($event['bot_id']);
+            }
+        }
         return $res;
     }
 
     public function updateFieldOrders($orders) {
         $stmt = $this->db->prepare("UPDATE event_fields SET sort_order = ? WHERE id = ?");
+        $event_id = null;
         foreach ($orders as $id => $order) {
+            if (!$event_id) {
+                $field = $this->getEventField($id);
+                if ($field) $event_id = $field['event_id'];
+            }
             $stmt->execute([$order, $id]);
         }
-        $this->syncCache();
+        if ($event_id) {
+            $event = $this->getEvent($event_id);
+            if ($event) {
+                $this->syncCache($event['bot_id']);
+            }
+        }
     }
 }

@@ -6,8 +6,8 @@ class BaleBot {
     private $token;
     private $apiUrl;
 
-    public function __construct() {
-        $this->token = BOT_TOKEN;
+    public function __construct($token = null) {
+        $this->token = $token ?: BOT_TOKEN;
         $this->apiUrl = "https://tapi.bale.ai/bot{$this->token}/";
     }
 

@@ -3,7 +3,10 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/Database.php';
 
 $db = Database::getInstance()->getConnection();
-$users = $db->query("SELECT * FROM bot_users ORDER BY last_interaction_at DESC")->fetchAll();
+$bot_id = $_SESSION['selected_bot_id'] ?? 1;
+$stmt = $db->prepare("SELECT * FROM bot_users WHERE bot_id = ? ORDER BY last_interaction_at DESC");
+$stmt->execute([$bot_id]);
+$users = $stmt->fetchAll();
 ?>
 
 <div class="bg-white p-5 rounded-xl border border-[#e2e8f0] mb-6">

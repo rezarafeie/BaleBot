@@ -19,6 +19,7 @@
                 }
             ?>
             <li><?= navLink('dashboard.php', 'house-door', 'پیشخوان', $current_page) ?></li>
+            <li><?= navLink('bots.php', 'robot', 'مدیریت بات‌ها', $current_page) ?></li>
             <li><?= navLink('events.php', 'calendar-event', 'مدیریت رویدادها', $current_page) ?></li>
             <li><?= navLink('registrations.php', 'card-list', 'لیست ثبت‌نام‌ها', $current_page) ?></li>
             <li><?= navLink('users.php', 'people', 'کاربران بات', $current_page) ?></li>

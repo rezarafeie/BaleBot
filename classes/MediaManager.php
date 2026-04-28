@@ -25,11 +25,19 @@ class MediaManager {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     }
 
-    public function getAllMedia() {
-        return $this->db->query("SELECT * FROM media_files ORDER BY id DESC")->fetchAll();
+    public function getAllMedia($bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $stmt = $this->db->prepare("SELECT * FROM media_files WHERE bot_id = ? ORDER BY id DESC");
+        $stmt->execute([$bot_id]);
+        return $stmt->fetchAll();
     }
 
-    public function uploadFile($file, $title) {
+    public function uploadFile($file, $title, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
         $allowedTypes = ['image/jpeg', 'image/png', 'video/mp4', 'application/pdf', 'audio/mpeg', 'audio/ogg'];
         $typeMapping = [
             'image/jpeg' => 'photo',
@@ -52,8 +60,8 @@ class MediaManager {
             $file_type = $typeMapping[$file['type']] ?? 'document';
             $path = '/uploads/' . $filename;
 
-            $stmt = $this->db->prepare("INSERT INTO media_files (file_path, file_type, file_size, title, created_at) VALUES (?, ?, ?, ?, NOW())");
-            $stmt->execute([$path, $file_type, $file['size'], $title]);
+            $stmt = $this->db->prepare("INSERT INTO media_files (bot_id, file_path, file_type, file_size, title, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$bot_id, $path, $file_type, $file['size'], $title]);
             return $this->db->lastInsertId();
         }
         throw new Exception("Upload failed.");
