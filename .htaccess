@@ -1,6 +1,0 @@
-RewriteEngine On
-RewriteBase /
-
-# Map /bot/{username}/webhook.php to /webhook.php?bot_user={username}
-# We use a secret to ensure security even with pretty URLs
-RewriteRule ^bot/([^/]+)/webhook\.php$ webhook.php?bot_user=$1 [QSA,L]

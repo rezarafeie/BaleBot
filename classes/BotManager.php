@@ -41,11 +41,22 @@ class BotManager {
         // Settings needs a bot_id to differentiate settings per bot
         try { 
             $this->db->exec("ALTER TABLE `settings` ADD `bot_id` INT DEFAULT 1"); 
-            // Also need to adjust unique index if exists
-            // Usually settings has unique(setting_key), we might need unique(bot_id, setting_key)
             try { $this->db->exec("ALTER TABLE `settings` DROP INDEX `setting_key` "); } catch(PDOException $ex) {}
             try { $this->db->exec("ALTER TABLE `settings` ADD UNIQUE KEY `bot_setting` (`bot_id`, `setting_key`) "); } catch(PDOException $ex) {}
         } catch(PDOException $e) {}
+
+        if (!is_dir(dirname(__DIR__) . '/bots')) {
+            $this->syncPhysicalBots();
+        }
+    }
+
+    private function syncPhysicalBots() {
+        $botsData = $this->db->query("SELECT username FROM bots")->fetchAll();
+        foreach ($botsData as $bot) {
+            if ($bot['username']) {
+                $this->ensureWebhookFile($bot['username']);
+            }
+        }
     }
 
     public function getBots() {
@@ -63,18 +74,51 @@ class BotManager {
         $username = ltrim($username, '@');
         $stmt = $this->db->prepare("SELECT * FROM bots WHERE username = ?");
         $stmt->execute([$username]);
-        return $stmt->fetch();
+        $bot = $stmt->fetch();
+        if ($bot) {
+            $this->ensureWebhookFile($bot['username']);
+        }
+        return $bot;
+    }
+
+    public function ensureWebhookFile($bot_username) {
+        $bot_username = ltrim($bot_username, '@');
+        
+        $baseDir = dirname(__DIR__);
+        $botsDir = $baseDir . '/bots';
+        if (!is_dir($botsDir)) {
+            @mkdir($botsDir, 0777, true);
+        }
+        
+        $botDir = $botsDir . '/' . $bot_username;
+        if (!is_dir($botDir)) {
+            @mkdir($botDir, 0777, true);
+        }
+        
+        $webhookFile = $botDir . '/webhook.php';
+        if (!file_exists($webhookFile)) {
+            $content = "<?php\n/**\n * Auto-generated webhook handler for @{$bot_username}\n */\n\$bot_user = '{$bot_username}';\nrequire_once '../../webhook.php';\n";
+            file_put_contents($webhookFile, $content);
+        }
     }
 
     public function createBot($name, $username, $token) {
         $stmt = $this->db->prepare("INSERT INTO bots (name, username, token) VALUES (?, ?, ?)");
         $stmt->execute([$name, $username, $token]);
-        return $this->db->lastInsertId();
+        $id = $this->db->lastInsertId();
+        if ($id) {
+            $this->ensureWebhookFile($username);
+        }
+        return $id;
     }
 
     public function updateBot($id, $name, $username, $token, $is_active) {
         $stmt = $this->db->prepare("UPDATE bots SET name = ?, username = ?, token = ?, is_active = ? WHERE id = ?");
-        return $stmt->execute([$name, $username, $token, $is_active ? 1 : 0, $id]);
+        $res = $stmt->execute([$name, $username, $token, $is_active ? 1 : 0, $id]);
+        if ($res) {
+            $this->ensureWebhookFile($username);
+        }
+        return $res;
     }
 
     public function deleteBot($id) {

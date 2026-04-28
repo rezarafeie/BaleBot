@@ -56,7 +56,8 @@ class EventManager {
 
         $cachePath = dirname(__DIR__) . "/data/events_cache_{$bot_id}.json";
         if (file_exists($cachePath)) {
-            return json_decode(file_get_contents($cachePath), true);
+            $data = json_decode(file_get_contents($cachePath), true);
+            if (!empty($data)) return $data;
         }
         $this->syncCache($bot_id);
         return json_decode(file_get_contents($cachePath), true) ?: [];

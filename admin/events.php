@@ -99,12 +99,17 @@ $events = $em->getAllEvents();
                             <!-- Copy to another bot -->
                             <?php if (count($bots) > 1): ?>
                             <div class="relative group inline-block">
-                                <button class="text-[#64748b] hover:text-blue-600">انتقال بات</button>
-                                <div class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl hidden group-hover:block z-50">
-                                    <div class="p-2 text-xs font-bold text-gray-400 border-b">کپی به بات:</div>
-                                    <?php foreach ($bots as $b): if($b['id'] == ($_SESSION['selected_bot_id'] ?? 0)) continue; ?>
-                                        <a href="events.php?copy_to=<?= $e['id'] ?>&bot_id=<?= $b['id'] ?>" class="block px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 rounded"><?= htmlspecialchars($b['name']) ?></a>
-                                    <?php endforeach; ?>
+                                <button class="text-[#64748b] hover:text-blue-600 transition-colors flex items-center gap-1">
+                                    کپی به بات
+                                    <?= render_icon('chevron-down', 'text-[10px]') ?>
+                                </button>
+                                <div class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-[#e2e8f0] rounded-xl shadow-2xl hidden group-hover:block z-50 overflow-hidden">
+                                    <div class="p-3 text-[11px] font-bold text-[#94a3b8] border-b border-[#f1f5f9] bg-[#f8fafc]">انتخاب بات مقصد:</div>
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <?php foreach ($bots as $b): if($b['id'] == ($_SESSION['selected_bot_id'] ?? 0)) continue; ?>
+                                            <a href="events.php?copy_to=<?= $e['id'] ?>&bot_id=<?= $b['id'] ?>" class="block px-4 py-2.5 text-xs text-[#475569] hover:bg-blue-50 hover:text-blue-600 transition-colors border-b border-[#f8fafc] last:border-0"><?= htmlspecialchars($b['name']) ?></a>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
                             </div>
                             <?php endif; ?>

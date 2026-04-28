@@ -62,9 +62,9 @@ require_once __DIR__ . '/../includes/header.php';
                 <td class="p-4 text-[#64748b]">@<?= htmlspecialchars($bot['username']) ?></td>
                 <td class="p-4">
                     <div class="flex items-center gap-2">
-                        <?php $prettyUrl = $baseUrl . "/bot/" . $bot['username'] . "/webhook.php"; ?>
+                        <?php $prettyUrl = $baseUrl . "/bots/" . $bot['username'] . "/webhook.php"; ?>
                         <code class="bg-gray-100 px-2 py-1 rounded text-[10px] text-blue-600 truncate max-w-[200px]" title="<?= $prettyUrl ?>">
-                            .../bot/<?= $bot['username'] ?>/webhook.php
+                            .../bots/<?= $bot['username'] ?>/webhook.php
                         </code>
                         <button onclick="navigator.clipboard.writeText('<?= $prettyUrl ?>'); alert('کپی شد!')" class="text-xs text-blue-500 hover:underline">کپی</button>
                     </div>
