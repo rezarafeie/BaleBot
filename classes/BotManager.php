@@ -32,6 +32,12 @@ class BotManager {
         try { $this->db->exec("ALTER TABLE `broadcasts` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `media_files` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         
+        // Media support for all messages
+        try { $this->db->exec("ALTER TABLE `events` ADD `welcome_media_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `completion_media_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_media_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `event_fields` ADD `media_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
+        
         // Settings needs a bot_id to differentiate settings per bot
         try { 
             $this->db->exec("ALTER TABLE `settings` ADD `bot_id` INT DEFAULT 1"); 

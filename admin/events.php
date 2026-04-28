@@ -6,7 +6,27 @@ $em = new EventManager();
 
 if (isset($_GET['delete'])) {
     $em->deleteEvent($_GET['delete']);
-    echo "<script>window.location='events.php';</script>";
+    header("Location: events.php");
+    exit;
+}
+
+if (isset($_GET['duplicate'])) {
+    $new_id = $em->duplicateEvent($_GET['duplicate']);
+    if ($new_id) {
+        header("Location: events.php?success=1");
+    } else {
+        header("Location: events.php?error=1");
+    }
+    exit;
+}
+
+if (isset($_GET['copy_to']) && isset($_GET['bot_id'])) {
+    $new_id = $em->duplicateEvent($_GET['copy_to'], $_GET['bot_id']);
+    if ($new_id) {
+        header("Location: events.php?success=1");
+    } else {
+        header("Location: events.php?error=1");
+    }
     exit;
 }
 
@@ -45,10 +65,27 @@ $events = $em->getAllEvents();
                         <?php endif; ?>
                     </td>
                     <td class="p-3.5"><?= explode(' ', $e['created_at'])[0] ?></td>
-                    <td class="p-3.5 flex gap-3">
-                        <a href="event-fields.php?id=<?= $e['id'] ?>" class="text-[#64748b] hover:text-blue-600 transition-colors" title="فیلدها">فرم‌ساز</a>
-                        <a href="event-edit.php?id=<?= $e['id'] ?>" class="text-[#64748b] hover:text-blue-600 transition-colors" title="ویرایش">ویرایش</a>
-                        <a href="events.php?delete=<?= $e['id'] ?>" onclick="return confirm('آیا مطمئن هستید؟');" class="text-red-500 hover:text-red-700 transition-colors" title="حذف">حذف</a>
+                    <td class="p-3.5">
+                        <div class="flex items-center gap-3">
+                            <a href="event-fields.php?id=<?= $e['id'] ?>" class="text-[#64748b] hover:text-blue-600 transition-colors" title="فیلدها">فرم‌ساز</a>
+                            <a href="event-edit.php?id=<?= $e['id'] ?>" class="text-[#64748b] hover:text-blue-600 transition-colors" title="ویرایش">ویرایش</a>
+                            <a href="events.php?duplicate=<?= $e['id'] ?>" onclick="return confirm('آیا از کپی این رویداد مطمئن هستید؟')" class="text-[#64748b] hover:text-blue-600" title="کپی">کپی</a>
+                            
+                            <!-- Copy to another bot -->
+                            <?php if (count($bots) > 1): ?>
+                            <div class="relative group inline-block">
+                                <button class="text-[#64748b] hover:text-blue-600">انتقال بات</button>
+                                <div class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl hidden group-hover:block z-50">
+                                    <div class="p-2 text-xs font-bold text-gray-400 border-b">کپی به بات:</div>
+                                    <?php foreach ($bots as $b): if($b['id'] == ($_SESSION['selected_bot_id'] ?? 0)) continue; ?>
+                                        <a href="events.php?copy_to=<?= $e['id'] ?>&bot_id=<?= $b['id'] ?>" class="block px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 rounded"><?= htmlspecialchars($b['name']) ?></a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <a href="events.php?delete=<?= $e['id'] ?>" onclick="return confirm('آیا مطمئن هستید؟');" class="text-red-500 hover:text-red-700 transition-colors" title="حذف">حذف</a>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>

@@ -97,20 +97,23 @@ class EventManager {
 
     public function createEvent($data) {
         $bot_id = $data['bot_id'] ?? ($_SESSION['selected_bot_id'] ?? 1);
-        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $bot_id,
             $data['title'],
             $data['slug'],
             $data['description'],
             $data['welcome_message'],
+            $data['welcome_media_id'] ?? null,
             $data['completion_message'],
+            $data['completion_media_id'] ?? null,
             $data['duplicate_message'],
             $data['is_active'] ? 1 : 0,
-            $data['duplicate_setting'],
+            $data['duplicate_setting'] ?? 'none',
             $data['use_ai'] ? 1 : 0,
             $data['ai_prompt'] ?? '',
             $data['ai_wait_message'] ?? '',
+            $data['ai_wait_media_id'] ?? null,
             $data['action_type'] ?? 'none',
             $data['action_webhook_url'] ?? '',
             $data['action_webhook_body'] ?? '',
@@ -122,19 +125,22 @@ class EventManager {
     }
 
     public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=? WHERE id=?");
         $res = $stmt->execute([
             $data['title'],
             $data['slug'],
             $data['description'],
             $data['welcome_message'],
+            $data['welcome_media_id'] ?? null,
             $data['completion_message'],
+            $data['completion_media_id'] ?? null,
             $data['duplicate_message'],
             $data['is_active'] ? 1 : 0,
-            $data['duplicate_setting'],
+            $data['duplicate_setting'] ?? 'none',
             $data['use_ai'] ? 1 : 0,
             $data['ai_prompt'] ?? '',
             $data['ai_wait_message'] ?? '',
+            $data['ai_wait_media_id'] ?? null,
             $data['action_type'] ?? 'none',
             $data['action_webhook_url'] ?? '',
             $data['action_webhook_body'] ?? '',
@@ -176,7 +182,7 @@ class EventManager {
     }
 
     public function addField($event_id, $data) {
-        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $res = $stmt->execute([
             $event_id,
             $data['label'],
@@ -188,6 +194,7 @@ class EventManager {
             $data['help_text'],
             $data['error_message'],
             $data['media_path'],
+            $data['media_id'] ?? null,
             $data['options_json'],
             1
         ]);
@@ -199,7 +206,7 @@ class EventManager {
     }
 
     public function updateField($id, $data) {
-        $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, options_json=?, is_active=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, media_id=?, options_json=?, is_active=? WHERE id=?");
         $res = $stmt->execute([
             $data['label'],
             $data['field_key'],
@@ -210,6 +217,7 @@ class EventManager {
             $data['help_text'],
             $data['error_message'],
             $data['media_path'],
+            $data['media_id'] ?? null,
             $data['options_json'],
             $data['is_active'] ? 1 : 0,
             $id
@@ -266,5 +274,35 @@ class EventManager {
                 $this->syncCache($event['bot_id']);
             }
         }
+    }
+
+    public function duplicateEvent($id, $new_bot_id = null) {
+        $event = $this->getEvent($id);
+        if (!$event) return false;
+
+        $fields = $this->getEventFields($id);
+
+        $eventData = $event;
+        $original_bot_id = $eventData['bot_id'];
+        unset($eventData['id']);
+        unset($eventData['created_at']);
+        
+        $eventData['title'] .= ' (کپی)';
+        $eventData['slug'] .= '-' . rand(100, 999);
+        
+        if ($new_bot_id) {
+            $eventData['bot_id'] = $new_bot_id;
+        }
+
+        $new_id = $this->createEvent($eventData);
+        if ($new_id) {
+            foreach ($fields as $field) {
+                $fieldData = $field;
+                unset($fieldData['id']);
+                $this->addField($new_id, $fieldData);
+            }
+            return $new_id;
+        }
+        return false;
     }
 }

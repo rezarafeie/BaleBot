@@ -1,8 +1,11 @@
 <?php
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/EventManager.php';
+require_once __DIR__ . '/../classes/MediaManager.php';
 
 $em = new EventManager();
+$mm = new MediaManager();
+$mediaList = $mm->getAllMedia();
 $event_id = $_GET['id'] ?? null;
 if (!$event_id) die("Event ID missing");
 
@@ -47,7 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'validation_rule' => '', // simplified
             'help_text' => $_POST['help_text'],
             'error_message' => $_POST['error_message'],
-            'media_path' => null, // simple text fields for now
+            'media_path' => null,
+            'media_id' => $_POST['media_id'] ?: null,
             'options_json' => $options_json
         ];
 
@@ -143,6 +147,16 @@ $fields = $em->getEventFields($event_id);
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-[#475569] mb-2">ترتیب نمایش</label>
                         <input type="number" name="sort_order" value="<?= $editing_field['sort_order'] ?? (count($fields) * 10 + 10) ?>" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-[#475569] mb-2">رسانه فیلد (اختیاری)</label>
+                        <select name="media_id" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                            <option value="">بدون رسانه</option>
+                            <?php foreach ($mediaList as $m): ?>
+                                <option value="<?= $m['id'] ?>" <?= ($editing_field['media_id']??'') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['title'] ?: $m['file_path']) ?> (<?= $m['file_type'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="flex gap-4 mb-6">

@@ -55,6 +55,36 @@ try {
 
 http_response_code(200);
 
+function sendMediaOrMessage($chat_id, $text, $media_id = null) {
+    global $bot, $db;
+    
+    if (!$media_id) {
+        return $bot->sendMessage($chat_id, $text);
+    }
+    
+    $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
+    $stmt->execute([$media_id]);
+    $mediaFile = $stmt->fetch();
+    
+    if (!$mediaFile) {
+        return $bot->sendMessage($chat_id, $text);
+    }
+    
+    $file = $mediaFile['bale_file_id'] ?: new CURLFile(dirname(__DIR__) . '/' . ltrim($mediaFile['file_path'], '/'));
+    
+    if ($mediaFile['file_type'] === 'photo') {
+        return $bot->sendPhoto($chat_id, $file, $text);
+    } elseif ($mediaFile['file_type'] === 'video') {
+        return $bot->sendVideo($chat_id, $file, $text);
+    } elseif ($mediaFile['file_type'] === 'document') {
+        return $bot->sendDocument($chat_id, $file, $text);
+    } elseif ($mediaFile['file_type'] === 'voice') {
+        return $bot->sendVoice($chat_id, $file, $text);
+    }
+    
+    return $bot->sendMessage($chat_id, $text);
+}
+
 function handleMessage($msg) {
     global $bot, $eventManager, $regManager, $db, $eventCache, $bot_id;
 
@@ -164,6 +194,27 @@ function handleCallbackQuery($cq) {
     $bot->answerCallbackQuery($cq['id']);
 }
 
+function sendMedia($chat_id, $media_id, $caption = '', $extra = []) {
+    global $bot, $db;
+    if (!$media_id) return false;
+
+    $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
+    $stmt->execute([$media_id]);
+    $media = $stmt->fetch();
+
+    if (!$media) return false;
+
+    $file = $media['bale_file_id'] ?: new CURLFile(dirname(__DIR__) . '/' . ltrim($media['file_path'], '/'));
+    
+    switch ($media['file_type']) {
+        case 'photo': return $bot->sendPhoto($chat_id, $file, $caption, $extra);
+        case 'video': return $bot->sendVideo($chat_id, $file, $caption, $extra);
+        case 'document': return $bot->sendDocument($chat_id, $file, $caption, $extra);
+        case 'voice': return $bot->sendVoice($chat_id, $file, $caption, $extra);
+    }
+    return false;
+}
+
 function sendEventSelection($chat_id) {
     global $bot, $eventManager, $eventCache, $bot_id;
     
@@ -211,7 +262,13 @@ function startEvent($chat_id, $event) {
 
     // Welcome message
     if (!empty(trim($event['welcome_message']))) {
-        $bot->sendMessage($chat_id, $event['welcome_message'], ['remove_keyboard' => true]);
+        if (!empty($event['welcome_media_id'])) {
+            sendMedia($chat_id, $event['welcome_media_id'], $event['welcome_message'], ['remove_keyboard' => true]);
+        } else {
+            $bot->sendMessage($chat_id, $event['welcome_message'], ['remove_keyboard' => true]);
+        }
+    } elseif (!empty($event['welcome_media_id'])) {
+        sendMedia($chat_id, $event['welcome_media_id'], '', ['remove_keyboard' => true]);
     }
 
     $regManager->setState($chat_id, $event['id'], 0, json_encode([]), 'registering', $bot_id);
@@ -271,14 +328,11 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
         $markup = ['remove_keyboard' => true];
     }
 
-    // Handle media if exists
-    if ($field['media_path']) {
-        $fullPath = dirname(__DIR__) . $field['media_path']; // Assuming local file
-        // Here we can just use sendPhoto or similar based on extending logic
-        // For simplicity, just sending text now, but media can be added.
+    if (!empty($field['media_id'])) {
+        sendMedia($chat_id, $field['media_id'], $prompt, (array)$markup);
+    } else {
+        $bot->sendMessage($chat_id, $prompt, $markup);
     }
-
-    $bot->sendMessage($chat_id, $prompt, $markup);
 }
 
 function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answers) {
@@ -355,7 +409,12 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
             if ($apiKey) {
                 $waitMsg = !empty(trim($event['ai_wait_message'])) ? $event['ai_wait_message'] : "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳";
                 $waitMsg = replacePlaceholders($waitMsg, $answers);
-                $bot->sendMessage($chat_id, $waitMsg, ['remove_keyboard' => true]);
+
+                if (!empty($event['ai_wait_media_id'])) {
+                    sendMedia($chat_id, $event['ai_wait_media_id'], $waitMsg, ['remove_keyboard' => true]);
+                } else {
+                    $bot->sendMessage($chat_id, $waitMsg, ['remove_keyboard' => true]);
+                }
                 
                 $aiPrompt = replacePlaceholders($event['ai_prompt'] ?? '', $answers);
                 $userDataStr = json_encode($answers, JSON_UNESCAPED_UNICODE);
@@ -376,7 +435,12 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         } else {
             $doneMsg = $event['completion_message'] ?: "ثبتنام شما با موفقیت انجام شد ✅\nممنون که اطلاعاتتان را ارسال کردید.";
             $doneMsg = replacePlaceholders($doneMsg, $answers);
-            $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+            
+            if (!empty($event['completion_media_id'])) {
+                sendMedia($chat_id, $event['completion_media_id'], $doneMsg, ['remove_keyboard' => true]);
+            } else {
+                $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+            }
         }
     }
 }

@@ -1,14 +1,18 @@
 <?php
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/EventManager.php';
+require_once __DIR__ . '/../classes/MediaManager.php';
 
 $em = new EventManager();
+$mm = new MediaManager();
+$mediaList = $mm->getAllMedia();
+
 $id = $_GET['id'] ?? null;
 
 $event = [
-    'title' => '', 'slug' => '', 'description' => '', 'welcome_message' => '',
-    'completion_message' => '', 'duplicate_message' => '', 'is_active' => 1, 'duplicate_setting' => 'allow',
-    'use_ai' => 0, 'ai_prompt' => '', 'ai_wait_message' => ''
+    'title' => '', 'slug' => '', 'description' => '', 'welcome_message' => '', 'welcome_media_id' => null,
+    'completion_message' => '', 'completion_media_id' => null, 'duplicate_message' => '', 'is_active' => 1, 'duplicate_setting' => 'allow',
+    'use_ai' => 0, 'ai_prompt' => '', 'ai_wait_message' => '', 'ai_wait_media_id' => null
 ];
 
 if ($id) {
@@ -22,13 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'slug' => $_POST['slug'] ?: uniqid('ev_'),
         'description' => $_POST['description'],
         'welcome_message' => $_POST['welcome_message'],
+        'welcome_media_id' => $_POST['welcome_media_id'] ?: null,
         'completion_message' => $_POST['completion_message'],
+        'completion_media_id' => $_POST['completion_media_id'] ?: null,
         'duplicate_message' => $_POST['duplicate_message'],
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
         'duplicate_setting' => $_POST['duplicate_setting'],
         'use_ai' => isset($_POST['use_ai']) ? 1 : 0,
         'ai_prompt' => $_POST['ai_prompt'] ?? '',
         'ai_wait_message' => $_POST['ai_wait_message'] ?? '',
+        'ai_wait_media_id' => $_POST['ai_wait_media_id'] ?? null,
         'action_type' => $_POST['action_type'] ?? 'none',
         'action_webhook_url' => $_POST['action_webhook_url'] ?? '',
         'action_webhook_body' => $_POST['action_webhook_body'] ?? '',
@@ -74,15 +81,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <h3 class="text-base font-semibold text-[#1e293b] mb-5">پیام‌های ربات</h3>
         
-        <div class="mb-5">
-            <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام خوش‌آمد (شروع رویه)</label>
-            <textarea name="welcome_message" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['welcome_message']) ?></textarea>
+        <div class="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام خوش‌آمد (شروع رویه)</label>
+                <textarea name="welcome_message" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['welcome_message']) ?></textarea>
+            </div>
+            <div>
+                <label class="block text-[13px] font-medium text-[#475569] mb-2">رسانه خوش‌آمد (تصویر/فایل)</label>
+                <select name="welcome_media_id" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                    <option value="">بدون رسانه</option>
+                    <?php foreach ($mediaList as $m): ?>
+                        <option value="<?= $m['id'] ?>" <?= ($event['welcome_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['title'] ?: $m['file_path']) ?> (<?= $m['file_type'] ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
         
-        <div class="mb-5">
-            <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام پایان (تکمیل ثبت‌نام)</label>
-            <textarea name="completion_message" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['completion_message']) ?></textarea>
-            <p class="text-xs text-[#64748b] mt-1">راهنما: می‌توانید از اطلاعات دریافت شده در مراحل ثبت‌نام استفاده کنید. برای مثال در صورت داشتن فیلدی با کلید <code>first_name</code>، از <code>{first_name}</code> استفاده کنید.</p>
+        <div class="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام پایان (تکمیل ثبت‌نام)</label>
+                <textarea name="completion_message" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['completion_message']) ?></textarea>
+            </div>
+            <div>
+                <label class="block text-[13px] font-medium text-[#475569] mb-2">رسانه پایان</label>
+                <select name="completion_media_id" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                    <option value="">بدون رسانه</option>
+                    <?php foreach ($mediaList as $m): ?>
+                        <option value="<?= $m['id'] ?>" <?= ($event['completion_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['title'] ?: $m['file_path']) ?> (<?= $m['file_type'] ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
 
         <div class="mb-8">
@@ -106,9 +134,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <textarea name="ai_prompt" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="مثال: بر اساس داده‌های دریافت شده زیر، یک رژیم غذایی مناسب برای شخص پیشنهاد بده."><?= htmlspecialchars($event['ai_prompt'] ?? '') ?></textarea>
                     <p class="text-xs text-[#64748b] mt-1">راهنما: اطلاعات وارد شده توسط کاربر در انتهای این پرامپت به هوش مصنوعی ارسال خواهد شد. در صورت فعال بودن هوش مصنوعی، پیام پایان فرم جایگزین پاسخ هوش مصنوعی خواهد شد.</p>
                 </div>
-                <div>
-                    <label class="block text-[13px] font-medium text-[#475569] mb-2">متن انتظار پردازش هوش مصنوعی</label>
-                    <input type="text" name="ai_wait_message" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳" value="<?= htmlspecialchars($event['ai_wait_message'] ?? '') ?>">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[13px] font-medium text-[#475569] mb-2">متن انتظار پردازش هوش مصنوعی</label>
+                        <input type="text" name="ai_wait_message" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳" value="<?= htmlspecialchars($event['ai_wait_message'] ?? '') ?>">
+                    </div>
+                    <div>
+                        <label class="block text-[13px] font-medium text-[#475569] mb-2">رسانه انتظار هوش مصنوعی</label>
+                        <select name="ai_wait_media_id" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                            <option value="">بدون رسانه</option>
+                            <?php foreach ($mediaList as $m): ?>
+                                <option value="<?= $m['id'] ?>" <?= ($event['ai_wait_media_id'] ?? '') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['title'] ?: $m['file_path']) ?> (<?= $m['file_type'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
