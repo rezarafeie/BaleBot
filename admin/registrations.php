@@ -120,7 +120,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <td class="p-3.5 font-mono" dir="ltr"><?= htmlspecialchars($r['user_phone'] ?? '-') ?></td>
                 <td class="p-3.5"><?= explode(' ', $r['created_at'])[0] ?></td>
                 <td class="p-3.5">
-                    <button onclick="alert('پاسخ‌ها:\n<?= str_replace("\"", "\\\"", addslashes(print_r(json_decode($r['answers_json'], true), true))) ?>');" class="text-[#2563eb] text-[12px] bg-[#eff6ff] px-2.5 py-1.5 rounded-md hover:bg-blue-100 transition-colors">
+                    <button onclick="document.getElementById('details_<?= $r['id'] ?>').classList.toggle('hidden')" class="text-[#2563eb] text-[12px] bg-[#eff6ff] px-2.5 py-1.5 rounded-md hover:bg-blue-100 transition-colors">
                         مشاهده فرم
                     </button>
                 </td>
@@ -128,6 +128,23 @@ require_once __DIR__ . '/../includes/header.php';
                     <a href="?delete=<?= $r['id'] ?>&event_id=<?= $filter_event ?>" onclick="return confirm('آیا از حذف این رکورد مطمئن هستید؟');" class="text-red-500 hover:text-red-700 transition-colors">
                         حذف
                     </a>
+                </td>
+            </tr>
+            <tr id="details_<?= $r['id'] ?>" class="hidden bg-[#f8fafc]">
+                <td colspan="7" class="p-4">
+                    <div class="bg-white border border-[#e2e8f0] rounded-lg p-4 shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <?php 
+                            $ans = json_decode($r['answers_json'], true) ?: [];
+                            foreach ($ans as $k => $v): 
+                            ?>
+                                <div class="border-b border-[#f1f5f9] pb-2">
+                                    <span class="text-[#64748b] text-[11px] block"><?= htmlspecialchars($k) ?></span>
+                                    <span class="text-[#1e293b] font-medium"><?= is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : htmlspecialchars($v) ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </td>
             </tr>
             <?php endforeach; ?>

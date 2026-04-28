@@ -29,6 +29,9 @@ $regManager = new RegistrationManager();
 
 $db = Database::getInstance()->getConnection();
 
+// Load event cache
+$eventCache = $eventManager->getCachedData();
+
 try {
     if (isset($update['message'])) {
         handleMessage($update['message']);
@@ -42,7 +45,7 @@ try {
 http_response_code(200);
 
 function handleMessage($msg) {
-    global $bot, $eventManager, $regManager, $db;
+    global $bot, $eventManager, $regManager, $db, $eventCache;
 
     $chat_id = $msg['chat']['id'] ?? null;
     if (!$chat_id) return;
@@ -66,16 +69,25 @@ function handleMessage($msg) {
         $param = trim(substr($text, 7));
         $regManager->clearState($chat_id);
         
-        $events = $eventManager->getAllEvents(true);
-        $found = false;
-        foreach ($events as $event) {
-            if ($event['slug'] === $param || (string)$event['id'] === $param) {
-                startEvent($chat_id, $event);
-                $found = true;
-                break;
+        $foundEvent = null;
+        if (isset($eventCache['slug_' . $param])) {
+            $eId = $eventCache['slug_' . $param];
+            $foundEvent = $eventCache[$eId] ?? null;
+        } elseif (isset($eventCache[$param])) {
+            $foundEvent = $eventCache[$param];
+        } else {
+            // Fallback to manual check
+            foreach ($eventCache as $k => $e) {
+                if (is_numeric($k) && ($e['slug'] === $param || (string)$e['id'] === $param)) {
+                    $foundEvent = $e;
+                    break;
+                }
             }
         }
-        if (!$found) {
+
+        if ($foundEvent) {
+            startEvent($chat_id, $foundEvent);
+        } else {
             sendEventSelection($chat_id);
         }
         return;
@@ -95,7 +107,7 @@ function handleMessage($msg) {
 }
 
 function handleCallbackQuery($cq) {
-    global $bot, $eventManager, $regManager;
+    global $bot, $eventManager, $regManager, $eventCache;
 
     $chat_id = $cq['message']['chat']['id'] ?? null;
     $data = $cq['data'] ?? '';
@@ -103,7 +115,7 @@ function handleCallbackQuery($cq) {
 
     if (strpos($data, 'event_start:') === 0) {
         $event_id = str_replace('event_start:', '', $data);
-        $event = $eventManager->getEvent($event_id);
+        $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
         if ($event && $event['is_active']) {
             startEvent($chat_id, $event);
         } else {
@@ -121,7 +133,8 @@ function handleCallbackQuery($cq) {
                 ($stateInfo['current_event_id'] ?? null) == $event_id && 
                 ($stateInfo['current_step_index'] ?? 0) == $step_index) {
                 
-                $fields = $eventManager->getEventFields($event_id, true);
+                $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
+                $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
                 if (isset($fields[$step_index])) {
                     $options = json_decode($fields[$step_index]['options_json'], true);
                     if (isset($options[$opt_idx])) {
@@ -141,8 +154,12 @@ function handleCallbackQuery($cq) {
 }
 
 function sendEventSelection($chat_id) {
-    global $bot, $eventManager;
-    $events = $eventManager->getAllEvents(true);
+    global $bot, $eventManager, $eventCache;
+    
+    $events = [];
+    foreach ($eventCache as $k => $v) {
+        if (is_numeric($k)) $events[] = $v;
+    }
     
     if (count($events) === 0) {
         $bot->sendMessage($chat_id, "در حال حاضر هیچ رویداد فعالی وجود ندارد.");
@@ -193,17 +210,25 @@ function startEvent($chat_id, $event) {
 
 function replacePlaceholders($text, $answers) {
     if (!$text || !is_array($answers)) return $text;
-    foreach ($answers as $key => $value) {
-        if (is_scalar($value)) {
-            $text = str_replace('{' . $key . '}', $value, $text);
-        }
+    
+    // Sort keys by length descending to avoid replacing {phone_number} with {phone} results
+    $keys = array_keys($answers);
+    usort($keys, function($a, $b) {
+        return strlen($b) - strlen($a);
+    });
+
+    foreach ($keys as $key) {
+        $value = $answers[$key];
+        $valStr = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : (string)$value;
+        $text = str_replace('{' . $key . '}', $valStr, $text);
     }
     return $text;
 }
 
 function askStep($chat_id, $event_id, $step_index, $answers = []) {
-    global $bot, $eventManager;
-    $fields = $eventManager->getEventFields($event_id, true);
+    global $bot, $eventManager, $eventCache;
+    $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
+    $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
     
     if ($step_index >= count($fields)) {
         // Complete
@@ -245,8 +270,9 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
 }
 
 function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answers) {
-    global $bot, $eventManager, $regManager;
-    $fields = $eventManager->getEventFields($event_id, true);
+    global $bot, $eventManager, $regManager, $eventCache;
+    $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
+    $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
     
     if ($step_index >= count($fields)) return;
     $field = $fields[$step_index];
@@ -304,8 +330,6 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         // Registration complete
         $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE));
         $regManager->clearState($chat_id);
-        
-        $event = $eventManager->getEvent($event_id);
         
         // Trigger completion actions if configured
         triggerCompletionAction($event, $answers, $chat_id);
@@ -375,17 +399,33 @@ function triggerCompletionAction($event, $answers, $chat_id) {
         return;
     }
     
+    global $db;
     // Add built-ins
     $answers['chat_id'] = $chat_id;
     $answers['event_id'] = $event['id'] ?? '';
     $answers['event_title'] = $event['title'] ?? '';
     
+    // Fetch user info for more placeholders
+    $stmt = $db->prepare("SELECT * FROM bot_users WHERE chat_id = ?");
+    $stmt->execute([$chat_id]);
+    $user = $stmt->fetch();
+    if ($user) {
+        $answers['user_name'] = $user['name'] ?? '';
+        $answers['user_username'] = $user['username'] ?? '';
+        
+        // Try to guess first/last name if not explicitly in answers
+        if (!isset($answers['first_name']) && $user['name']) {
+            $parts = explode(' ', $user['name']);
+            $answers['first_name'] = $parts[0];
+            $answers['last_name'] = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
+        }
+    }
+    
     if ($event['action_type'] === 'webhook' && !empty($event['action_webhook_url'])) {
-        $url = $event['action_webhook_url'];
+        $url = trim($event['action_webhook_url']);
         
         if (!empty($event['action_webhook_body'])) {
-            $bodyStr = replacePlaceholders($event['action_webhook_body'], $answers);
-            $payload = $bodyStr;
+            $payload = replacePlaceholders($event['action_webhook_body'], $answers);
         } else {
             $payload = json_encode($answers, JSON_UNESCAPED_UNICODE);
         }
@@ -395,6 +435,7 @@ function triggerCompletionAction($event, $answers, $chat_id) {
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         $res = curl_exec($ch);
         $err = curl_error($ch);
         curl_close($ch);
@@ -407,16 +448,36 @@ function triggerCompletionAction($event, $answers, $chat_id) {
         ]);
         
     } elseif ($event['action_type'] === 'http_request' && !empty($event['action_http_url'])) {
-        $urlTemplate = $event['action_http_url'];
-        // URL encode the replaced values so they are safe in query string
-        $safeAnswers = [];
-        foreach ($answers as $k => $v) {
-            $safeAnswers[$k] = urlencode($v);
+        $urlTemplate = trim($event['action_http_url']);
+        
+        // We need to replace placeholders selectively and urlencode the VALUES only
+        $url = $urlTemplate;
+        
+        // Sort keys by length descending to avoid partial replacement issues
+        $keys = array_keys($answers);
+        usort($keys, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+
+        foreach ($keys as $key) {
+            $value = $answers[$key];
+            if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+            
+            // Only encode if it's going into a URL
+            $encodedValue = urlencode($value);
+            $url = str_replace('{' . $key . '}', $encodedValue, $url);
         }
-        $url = replacePlaceholders($urlTemplate, $safeAnswers);
+        
+        // Final fallback: remove any unreplaced {tags} to prevent malformed URLs
+        $url = preg_replace('/\{[a-zA-Z0-9_]+\}/', '', $url);
+        // Also ensure no raw spaces in URL
+        $url = str_replace(' ', '%20', $url);
         
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Sometimes needed for some APIs in this env
         $res = curl_exec($ch);
         $err = curl_error($ch);
         curl_close($ch);

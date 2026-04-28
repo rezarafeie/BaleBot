@@ -19,21 +19,62 @@ class RegistrationManager {
     }
 
     public function getUserState($chat_id) {
+        $cachePath = dirname(__DIR__) . "/data/states/{$chat_id}.json";
+        if (file_exists($cachePath)) {
+            $data = json_decode(file_get_contents($cachePath), true);
+            if ($data && (time() - ($data['updated_at_timestamp'] ?? 0) < 86400)) { // 24h expiry
+                return $data;
+            }
+        }
+        
+        // Fallback to DB
         $stmt = $this->db->prepare("SELECT * FROM user_states WHERE chat_id = ?");
         $stmt->execute([$chat_id]);
-        return $stmt->fetch();
+        $data = $stmt->fetch();
+        if ($data) {
+            $data['updated_at_timestamp'] = strtotime($data['updated_at']);
+        }
+        return $data;
     }
 
     public function setState($chat_id, $event_id, $step_index, $answers_json, $status) {
+        $data = [
+            'chat_id' => $chat_id,
+            'current_event_id' => $event_id,
+            'current_step_index' => $step_index,
+            'answers_json' => $answers_json,
+            'status' => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+            'updated_at_timestamp' => time()
+        ];
+        
+        $dir = dirname(__DIR__) . "/data/states";
+        if (!is_dir($dir)) @mkdir($dir, 0777, true);
+        file_put_contents("{$dir}/{$chat_id}.json", json_encode($data));
+
+        // Use background or occasional sync for DB if needed, but for now just write to DB too for reliability if it's not too slow
+        // Or only write to JSON and only write to DB on completion. 
+        // User said: "after form finished and submited then pull that record to database"
+        // So we can skip DB write here for speed.
+        /*
         $stmt = $this->db->prepare("INSERT INTO user_states (chat_id, current_event_id, current_step_index, answers_json, status, updated_at) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=NOW()");
         return $stmt->execute([
             $chat_id, $event_id, $step_index, $answers_json, $status,
             $event_id, $step_index, $answers_json, $status
         ]);
+        */
+        return true;
     }
 
     public function clearState($chat_id) {
-        return $this->setState($chat_id, null, 0, json_encode([]), 'idle');
+        $cachePath = dirname(__DIR__) . "/data/states/{$chat_id}.json";
+        if (file_exists($cachePath)) {
+            @unlink($cachePath);
+        }
+        // Also clear in DB just in case
+        $stmt = $this->db->prepare("DELETE FROM user_states WHERE chat_id = ?");
+        $stmt->execute([$chat_id]);
+        return true;
     }
 
     public function completeRegistration($chat_id, $event_id, $answers_json) {
@@ -96,11 +137,26 @@ class RegistrationManager {
     }
 
     public function updateBotUser($chat_id, $bale_user_id, $name, $username) {
+        // Cache to avoid frequent DB updates for same user session
+        $cachePath = dirname(__DIR__) . "/data/users/{$chat_id}.json";
+        if (file_exists($cachePath)) {
+            $data = json_decode(file_get_contents($cachePath), true);
+            if ($data && (time() - ($data['last_sync'] ?? 0) < 3600)) { // Sync once per hour
+                return true; 
+            }
+        }
+
         $stmt = $this->db->prepare("INSERT INTO bot_users (chat_id, bale_user_id, name, username, first_interaction_at, last_interaction_at) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=?, last_interaction_at=NOW()");
-        return $stmt->execute([
+        $res = $stmt->execute([
             $chat_id, $bale_user_id, $name, $username,
             $name, $username
         ]);
+
+        $dir = dirname(__DIR__) . "/data/users";
+        if (!is_dir($dir)) @mkdir($dir, 0777, true);
+        file_put_contents($cachePath, json_encode(['last_sync' => time()]));
+
+        return $res;
     }
 
     public function getRegistrations($event_id = null) {

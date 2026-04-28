@@ -23,6 +23,35 @@ class EventManager {
         } catch(PDOException $e) {}
     }
 
+    public function syncCache() {
+        $events = $this->getAllEvents(true);
+        $cache = [];
+        foreach ($events as $event) {
+            $fields = $this->getEventFields($event['id'], true);
+            $event['fields'] = $fields;
+            $cache[$event['id']] = $event;
+            // Also index by slug if available
+            if (!empty($event['slug'])) {
+                $cache['slug_' . $event['slug']] = $event['id'];
+            }
+        }
+        
+        $cachePath = dirname(__DIR__) . '/data/events_cache.json';
+        if (!is_dir(dirname($cachePath))) {
+            @mkdir(dirname($cachePath), 0777, true);
+        }
+        file_put_contents($cachePath, json_encode($cache, JSON_UNESCAPED_UNICODE));
+    }
+
+    public function getCachedData() {
+        $cachePath = dirname(__DIR__) . '/data/events_cache.json';
+        if (file_exists($cachePath)) {
+            return json_decode(file_get_contents($cachePath), true);
+        }
+        $this->syncCache();
+        return json_decode(file_get_contents($cachePath), true);
+    }
+
     public function getAllEvents($activeOnly = false) {
         $sql = "SELECT * FROM events";
         if ($activeOnly) {
@@ -58,12 +87,14 @@ class EventManager {
             $data['action_webhook_body'] ?? '',
             $data['action_http_url'] ?? ''
         ]);
-        return $this->db->lastInsertId();
+        $id = $this->db->lastInsertId();
+        $this->syncCache();
+        return $id;
     }
 
     public function updateEvent($id, $data) {
         $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=? WHERE id=?");
-        return $stmt->execute([
+        $res = $stmt->execute([
             $data['title'],
             $data['slug'],
             $data['description'],
@@ -81,11 +112,15 @@ class EventManager {
             $data['action_http_url'] ?? '',
             $id
         ]);
+        $this->syncCache();
+        return $res;
     }
 
     public function deleteEvent($id) {
         $stmt = $this->db->prepare("DELETE FROM events WHERE id = ?");
-        return $stmt->execute([$id]);
+        $res = $stmt->execute([$id]);
+        $this->syncCache();
+        return $res;
     }
 
     // --- Fields ---
@@ -107,7 +142,7 @@ class EventManager {
 
     public function addField($event_id, $data) {
         $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([
+        $res = $stmt->execute([
             $event_id,
             $data['label'],
             $data['field_key'],
@@ -121,11 +156,13 @@ class EventManager {
             $data['options_json'],
             1
         ]);
+        $this->syncCache();
+        return $res;
     }
 
     public function updateField($id, $data) {
         $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, options_json=?, is_active=? WHERE id=?");
-        return $stmt->execute([
+        $res = $stmt->execute([
             $data['label'],
             $data['field_key'],
             $data['type'],
@@ -139,16 +176,22 @@ class EventManager {
             $data['is_active'] ? 1 : 0,
             $id
         ]);
+        $this->syncCache();
+        return $res;
     }
 
     public function toggleFieldActive($id) {
         $stmt = $this->db->prepare("UPDATE event_fields SET is_active = NOT is_active WHERE id = ?");
-        return $stmt->execute([$id]);
+        $res = $stmt->execute([$id]);
+        $this->syncCache();
+        return $res;
     }
 
     public function deleteField($id) {
         $stmt = $this->db->prepare("DELETE FROM event_fields WHERE id = ?");
-        return $stmt->execute([$id]);
+        $res = $stmt->execute([$id]);
+        $this->syncCache();
+        return $res;
     }
 
     public function updateFieldOrders($orders) {
@@ -156,5 +199,6 @@ class EventManager {
         foreach ($orders as $id => $order) {
             $stmt->execute([$order, $id]);
         }
+        $this->syncCache();
     }
 }
