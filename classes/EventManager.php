@@ -7,6 +7,16 @@ class EventManager {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
+        
+        try {
+            $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0");
+            $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL");
+        } catch(PDOException $e) {}
+        
+        try {
+            $this->db->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('gapgpt_api_key', '')");
+            $this->db->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('event_selection_text', '')");
+        } catch(PDOException $e) {}
     }
 
     public function getAllEvents($activeOnly = false) {
@@ -26,7 +36,7 @@ class EventManager {
     }
 
     public function createEvent($data) {
-        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -35,13 +45,15 @@ class EventManager {
             $data['completion_message'],
             $data['duplicate_message'],
             $data['is_active'] ? 1 : 0,
-            $data['duplicate_setting']
+            $data['duplicate_setting'],
+            $data['use_ai'] ? 1 : 0,
+            $data['ai_prompt'] ?? ''
         ]);
         return $this->db->lastInsertId();
     }
 
     public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=? WHERE id=?");
         return $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -51,6 +63,8 @@ class EventManager {
             $data['duplicate_message'],
             $data['is_active'] ? 1 : 0,
             $data['duplicate_setting'],
+            $data['use_ai'] ? 1 : 0,
+            $data['ai_prompt'] ?? '',
             $id
         ]);
     }

@@ -126,6 +126,8 @@ CREATE TABLE IF NOT EXISTS `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('webhook_url', '');
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('gapgpt_api_key', '');
+INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('event_selection_text', '');
 
 -- Default admin: admin / admin123
 INSERT IGNORE INTO `admins` (`username`, `password_hash`) VALUES ('admin', '$2y$10$wE/.76TzM8x1PWeQO3S3A.HwGzRkZ39.S.H.1.E//.tLXYI9M304C');

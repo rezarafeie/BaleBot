@@ -24,12 +24,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $auth->updatePassword($_POST['new_pass']);
             $msg = "رمز عبور مدیر تغییر کرد.";
         }
+    } elseif (isset($_POST['save_gapgpt'])) {
+        $key = $_POST['gapgpt_api_key'] ?? '';
+        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('gapgpt_api_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$key, $key]);
+        $msg = "کلید API GapGPT ذخیره شد.";
+    } elseif (isset($_POST['save_event_selection'])) {
+        $text = $_POST['event_selection_text'] ?? '';
+        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES ('event_selection_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$text, $text]);
+        $msg = "متن پیش‌فرض انتخاب رویداد ذخیره شد.";
     }
 }
 
 // Get current setting
 $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'webhook_url'");
 $current_webhook = $stmt->fetchColumn() ?: '';
+
+$stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key'");
+$current_gapgpt_key = $stmt->fetchColumn() ?: '';
+
+$stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text'");
+$current_event_selection_text = $stmt->fetchColumn() ?: '';
 
 // Determine what URL should be auto-filled
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
@@ -76,6 +92,35 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
                     <input type="password" name="new_pass" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 text-left font-mono tracking-widest" dir="ltr" required>
                 </div>
                 <button type="submit" name="change_pass" class="bg-white hover:bg-gray-50 border border-[#e2e8f0] text-[#10b981] font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره رمز جدید</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#e2e8f0]">
+        <div class="p-5 border-b border-[#f1f5f9]">
+            <h2 class="text-base font-semibold text-[#1e293b]">تنظیمات هوش مصنوعی GapGPT</h2>
+        </div>
+        <div class="p-5">
+            <form method="POST">
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-[#475569] mb-2">کلید دسترسی (API Key)</label>
+                    <input type="text" name="gapgpt_api_key" value="<?= htmlspecialchars($current_gapgpt_key) ?>" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 text-left font-mono" dir="ltr" placeholder="sk-...">
+                </div>
+                <button type="submit" name="save_gapgpt" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره</button>
+            </form>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl border border-[#e2e8f0]">
+        <div class="p-5 border-b border-[#f1f5f9]">
+            <h2 class="text-base font-semibold text-[#1e293b]">متن انتخاب رویداد</h2>
+        </div>
+        <div class="p-5">
+            <form method="POST">
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-[#475569] mb-2">متن ارسال شده برای انتخاب رویدادها</label>
+                    <textarea name="event_selection_text" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="سلام 👋&#10;به سامانه ثبتنام خوش آمدید.&#10;برای شروع، لطفاً رویداد موردنظر خود را انتخاب کنید."><?= htmlspecialchars($current_event_selection_text) ?></textarea>
+                </div>
+                <button type="submit" name="save_event_selection" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره</button>
             </form>
         </div>
     </div>

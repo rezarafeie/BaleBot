@@ -77,6 +77,7 @@ $fields = $em->getEventFields($event_id);
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-[#475569] mb-2">متن سوال (پیام ربات)</label>
                         <textarea name="help_text" rows="2" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="لطفاً نام و نام خانوادگی خود را وارد کنید:"></textarea>
+                        <p class="text-xs text-[#64748b] mt-1">راهنما: از فیلدهای قبلی استفاده کنید. مثلا: <code>{firstname}</code> عزیز، حالا کد ملیت رو وارد کن.</p>
                     </div>
 
                     <div class="mb-4">

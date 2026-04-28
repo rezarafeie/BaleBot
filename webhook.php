@@ -58,6 +58,25 @@ function handleMessage($msg) {
 
     // Handle /start or cancel
     $text = $msg['text'] ?? '';
+    if (strpos($text, '/start ') === 0) {
+        $param = trim(substr($text, 7));
+        $regManager->clearState($chat_id);
+        
+        $events = $eventManager->getAllEvents(true);
+        $found = false;
+        foreach ($events as $event) {
+            if ($event['slug'] === $param || (string)$event['id'] === $param) {
+                startEvent($chat_id, $event);
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            sendEventSelection($chat_id);
+        }
+        return;
+    }
+
     if ($text === '/start' || $text === 'انصراف' || $text === '/cancel') {
         $regManager->clearState($chat_id);
         sendEventSelection($chat_id);
@@ -111,7 +130,13 @@ function sendEventSelection($chat_id) {
         ];
     }
     
-    $bot->sendMessage($chat_id, "سلام 👋\nبه سامانه ثبتنام خوش آمدید.\nبرای شروع، لطفاً رویداد موردنظر خود را انتخاب کنید.", $bot->getInlineKeyboard($buttons));
+    global $db;
+    $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text'");
+    $setting_text = $stmt->fetchColumn();
+    
+    $message = $setting_text ?: "سلام 👋\nبه سامانه ثبتنام خوش آمدید.\nبرای شروع، لطفاً رویداد موردنظر خود را انتخاب کنید.";
+    
+    $bot->sendMessage($chat_id, $message, $bot->getInlineKeyboard($buttons));
 }
 
 function startEvent($chat_id, $event) {
@@ -130,10 +155,20 @@ function startEvent($chat_id, $event) {
     $regManager->setState($chat_id, $event['id'], 0, json_encode([]), 'registering');
     
     // Trigger first step
-    askStep($chat_id, $event['id'], 0);
+    askStep($chat_id, $event['id'], 0, []);
 }
 
-function askStep($chat_id, $event_id, $step_index) {
+function replacePlaceholders($text, $answers) {
+    if (!$text || !is_array($answers)) return $text;
+    foreach ($answers as $key => $value) {
+        if (is_scalar($value)) {
+            $text = str_replace('{' . $key . '}', $value, $text);
+        }
+    }
+    return $text;
+}
+
+function askStep($chat_id, $event_id, $step_index, $answers = []) {
     global $bot, $eventManager;
     $fields = $eventManager->getEventFields($event_id);
     
@@ -144,6 +179,7 @@ function askStep($chat_id, $event_id, $step_index) {
 
     $field = $fields[$step_index];
     $prompt = $field['help_text'] ?: "لطفا {$field['label']} را وارد کنید:";
+    $prompt = replacePlaceholders($prompt, $answers);
     
     $markup = null;
     if ($field['type'] === 'phone' || $field['type'] === 'contact') {
@@ -209,14 +245,69 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
     $regManager->setState($chat_id, $event_id, $step_index, json_encode($answers, JSON_UNESCAPED_UNICODE), 'registering');
 
     if ($step_index < count($fields)) {
-        askStep($chat_id, $event_id, $step_index);
+        askStep($chat_id, $event_id, $step_index, $answers);
     } else {
         // Registration complete
         $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE));
         $regManager->clearState($chat_id);
         
         $event = $eventManager->getEvent($event_id);
-        $doneMsg = $event['completion_message'] ?: "ثبتنام شما با موفقیت انجام شد ✅\nممنون که اطلاعاتتان را ارسال کردید.";
-        $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+        
+        if ($event['use_ai']) {
+            global $db;
+            $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key'");
+            $apiKey = $stmt->fetchColumn();
+            
+            if ($apiKey) {
+                $bot->sendMessage($chat_id, "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳", ['remove_keyboard' => true]);
+                
+                $aiPrompt = replacePlaceholders($event['ai_prompt'] ?? '', $answers);
+                $userDataStr = json_encode($answers, JSON_UNESCAPED_UNICODE);
+                
+                $fullPrompt = $aiPrompt . "\n\nاطلاعات کاربر:\n" . $userDataStr;
+                
+                $aiResponse = callGapGPT($fullPrompt, $apiKey);
+                
+                if ($aiResponse) {
+                    $bot->sendMessage($chat_id, $aiResponse, ['remove_keyboard' => true]);
+                } else {
+                    $bot->sendMessage($chat_id, "متاسفانه در ارتباط با هوش مصنوعی خطایی رخ داد.", ['remove_keyboard' => true]);
+                }
+            } else {
+                $doneMsg = "ثبت‌نام شما با موفقیت انجام شد. (خطا: کلید API سرویس هوش مصنوعی تنظیم نشده است.)";
+                $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+            }
+        } else {
+            $doneMsg = $event['completion_message'] ?: "ثبتنام شما با موفقیت انجام شد ✅\nممنون که اطلاعاتتان را ارسال کردید.";
+            $doneMsg = replacePlaceholders($doneMsg, $answers);
+            $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+        }
     }
+}
+
+function callGapGPT($prompt, $apiKey) {
+    $ch = curl_init('https://api.gapgpt.app/v1/chat/completions');
+    $payload = json_encode([
+        "model" => "gapgpt-qwen-3.6",
+        "messages" => [
+            ["role" => "user", "content" => $prompt]
+        ]
+    ]);
+    
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer " . $apiKey,
+        "Content-Type: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    
+    $response = curl_exec($ch);
+    if (curl_errno($ch)) {
+        return false;
+    }
+    curl_close($ch);
+    
+    $decoded = json_decode($response, true);
+    return $decoded['choices'][0]['message']['content'] ?? false;
 }

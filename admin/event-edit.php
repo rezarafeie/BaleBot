@@ -7,7 +7,8 @@ $id = $_GET['id'] ?? null;
 
 $event = [
     'title' => '', 'slug' => '', 'description' => '', 'welcome_message' => '',
-    'completion_message' => '', 'duplicate_message' => '', 'is_active' => 1, 'duplicate_setting' => 'allow'
+    'completion_message' => '', 'duplicate_message' => '', 'is_active' => 1, 'duplicate_setting' => 'allow',
+    'use_ai' => 0, 'ai_prompt' => ''
 ];
 
 if ($id) {
@@ -24,7 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'completion_message' => $_POST['completion_message'],
         'duplicate_message' => $_POST['duplicate_message'],
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
-        'duplicate_setting' => $_POST['duplicate_setting']
+        'duplicate_setting' => $_POST['duplicate_setting'],
+        'use_ai' => isset($_POST['use_ai']) ? 1 : 0,
+        'ai_prompt' => $_POST['ai_prompt'] ?? ''
     ];
 
     if ($id) {
@@ -74,12 +77,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-5">
             <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام پایان (تکمیل ثبت‌نام)</label>
             <textarea name="completion_message" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['completion_message']) ?></textarea>
+            <p class="text-xs text-[#64748b] mt-1">راهنما: می‌توانید از اطلاعات دریافت شده در مراحل ثبت‌نام استفاده کنید. برای مثال در صورت داشتن فیلدی با کلید <code>first_name</code>، از <code>{first_name}</code> استفاده کنید.</p>
         </div>
 
         <div class="mb-8">
             <label class="block text-[13px] font-medium text-[#475569] mb-2">پیام خطای تکراری</label>
             <textarea name="duplicate_message" rows="2" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['duplicate_message']) ?></textarea>
         </div>
+
+        <div class="border-t border-[#f1f5f9] mb-6"></div>
+
+        <h3 class="text-base font-semibold text-[#1e293b] mb-5">تنظیمات هوش مصنوعی (GapGPT)</h3>
+
+        <div class="mb-5">
+            <div class="flex items-center mb-4">
+                <input type="checkbox" name="use_ai" id="use_ai" value="1" <?= $event['use_ai'] ? 'checked' : '' ?> class="w-4 h-4 text-blue-600 bg-[#f8fafc] border-[#e2e8f0] rounded focus:ring-blue-500 focus:ring-2">
+                <label for="use_ai" class="mr-2 text-sm font-medium text-[#334155] cursor-pointer">تحلیل داده‌های کاربری با هوش مصنوعی در پایان ثبت‌نام</label>
+            </div>
+            
+            <div id="ai_prompt_container" class="<?= $event['use_ai'] ? '' : 'hidden' ?>">
+                <label class="block text-[13px] font-medium text-[#475569] mb-2">پرامپت (دستورالعمل) هوش مصنوعی</label>
+                <textarea name="ai_prompt" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="مثال: بر اساس داده‌های دریافت شده زیر، یک رژیم غذایی مناسب برای شخص پیشنهاد بده."><?= htmlspecialchars($event['ai_prompt'] ?? '') ?></textarea>
+                <p class="text-xs text-[#64748b] mt-1">راهنما: اطلاعات وارد شده توسط کاربر در انتهای این پرامپت به هوش مصنوعی ارسال خواهد شد. در صورت فعال بودن هوش مصنوعی، پیام پایان فرم جایگزین پاسخ هوش مصنوعی خواهد شد.</p>
+            </div>
+        </div>
+
+        <script>
+        document.getElementById('use_ai').addEventListener('change', function() {
+            document.getElementById('ai_prompt_container').classList.toggle('hidden', !this.checked);
+        });
+        </script>
 
         <div class="border-t border-[#f1f5f9] mb-6"></div>
 
