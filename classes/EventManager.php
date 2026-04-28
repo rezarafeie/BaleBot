@@ -11,6 +11,8 @@ class EventManager {
         try {
             $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0");
             $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL");
+            $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL");
+            $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1");
         } catch(PDOException $e) {}
         
         try {
@@ -36,7 +38,7 @@ class EventManager {
     }
 
     public function createEvent($data) {
-        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -47,13 +49,14 @@ class EventManager {
             $data['is_active'] ? 1 : 0,
             $data['duplicate_setting'],
             $data['use_ai'] ? 1 : 0,
-            $data['ai_prompt'] ?? ''
+            $data['ai_prompt'] ?? '',
+            $data['ai_wait_message'] ?? ''
         ]);
         return $this->db->lastInsertId();
     }
 
     public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=? WHERE id=?");
         return $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -65,6 +68,7 @@ class EventManager {
             $data['duplicate_setting'],
             $data['use_ai'] ? 1 : 0,
             $data['ai_prompt'] ?? '',
+            $data['ai_wait_message'] ?? '',
             $id
         ]);
     }
@@ -75,14 +79,24 @@ class EventManager {
     }
 
     // --- Fields ---
-    public function getEventFields($event_id) {
-        $stmt = $this->db->prepare("SELECT * FROM event_fields WHERE event_id = ? ORDER BY sort_order ASC");
+    public function getEventFields($event_id, $activeOnly = false) {
+        if ($activeOnly) {
+            $stmt = $this->db->prepare("SELECT * FROM event_fields WHERE event_id = ? AND is_active = 1 ORDER BY sort_order ASC");
+        } else {
+            $stmt = $this->db->prepare("SELECT * FROM event_fields WHERE event_id = ? ORDER BY sort_order ASC");
+        }
         $stmt->execute([$event_id]);
         return $stmt->fetchAll();
     }
 
+    public function getEventField($id) {
+        $stmt = $this->db->prepare("SELECT * FROM event_fields WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch();
+    }
+
     public function addField($event_id, $data) {
-        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, options_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         return $stmt->execute([
             $event_id,
             $data['label'],
@@ -94,8 +108,32 @@ class EventManager {
             $data['help_text'],
             $data['error_message'],
             $data['media_path'],
-            $data['options_json']
+            $data['options_json'],
+            1
         ]);
+    }
+
+    public function updateField($id, $data) {
+        $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, options_json=?, is_active=? WHERE id=?");
+        return $stmt->execute([
+            $data['label'],
+            $data['field_key'],
+            $data['type'],
+            $data['is_required'] ? 1 : 0,
+            $data['sort_order'],
+            $data['validation_rule'],
+            $data['help_text'],
+            $data['error_message'],
+            $data['media_path'],
+            $data['options_json'],
+            $data['is_active'] ? 1 : 0,
+            $id
+        ]);
+    }
+
+    public function toggleFieldActive($id) {
+        $stmt = $this->db->prepare("UPDATE event_fields SET is_active = NOT is_active WHERE id = ?");
+        return $stmt->execute([$id]);
     }
 
     public function deleteField($id) {

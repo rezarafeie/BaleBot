@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `event_fields` (
   `field_key` varchar(100) NOT NULL,
   `type` varchar(50) NOT NULL,
   `is_required` tinyint(1) DEFAULT 1,
+  `is_active` tinyint(1) DEFAULT 1,
   `sort_order` int(11) DEFAULT 0,
   `validation_rule` varchar(255) DEFAULT NULL,
   `help_text` text,

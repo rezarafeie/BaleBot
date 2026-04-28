@@ -105,6 +105,33 @@ function handleCallbackQuery($cq) {
         } else {
             $bot->sendMessage($chat_id, "این رویداد در حال حاضر فعال نیست.");
         }
+    } elseif (strpos($data, 'dd_ans:') === 0) {
+        $parts = explode(':', $data, 4);
+        if (count($parts) == 4) {
+            $event_id = $parts[1];
+            $step_index = $parts[2];
+            $opt_idx = $parts[3];
+            
+            $stateInfo = $regManager->getUserState($chat_id);
+            if ($stateInfo && ($stateInfo['status'] ?? '') === 'registering' && 
+                ($stateInfo['current_event_id'] ?? null) == $event_id && 
+                ($stateInfo['current_step_index'] ?? 0) == $step_index) {
+                
+                $fields = $eventManager->getEventFields($event_id, true);
+                if (isset($fields[$step_index])) {
+                    $options = json_decode($fields[$step_index]['options_json'], true);
+                    if (isset($options[$opt_idx])) {
+                        $mockMsg = [
+                            'text' => $options[$opt_idx],
+                            'chat' => ['id' => $chat_id],
+                            'from' => $cq['from'] ?? []
+                        ];
+                        $answers = json_decode($stateInfo['answers_json'] ?? '{}', true) ?: [];
+                        processRegistrationStep($chat_id, $mockMsg, $event_id, $step_index, $answers);
+                    }
+                }
+            }
+        }
     }
     $bot->answerCallbackQuery($cq['id']);
 }
@@ -149,8 +176,10 @@ function startEvent($chat_id, $event) {
         return;
     }
 
-    $msg = $event['welcome_message'] ?: "سلام 👋\nبرای ثبتنام در «{$event['title']}» آماده‌ای؟\nلطفاً اطلاعات خواسته‌شده را مرحله‌به‌مرحله ارسال کن.";
-    $bot->sendMessage($chat_id, $msg, ['remove_keyboard' => true]);
+    // Welcome message
+    if (!empty(trim($event['welcome_message']))) {
+        $bot->sendMessage($chat_id, $event['welcome_message'], ['remove_keyboard' => true]);
+    }
 
     $regManager->setState($chat_id, $event['id'], 0, json_encode([]), 'registering');
     
@@ -170,7 +199,7 @@ function replacePlaceholders($text, $answers) {
 
 function askStep($chat_id, $event_id, $step_index, $answers = []) {
     global $bot, $eventManager;
-    $fields = $eventManager->getEventFields($event_id);
+    $fields = $eventManager->getEventFields($event_id, true);
     
     if ($step_index >= count($fields)) {
         // Complete
@@ -184,6 +213,19 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
     $markup = null;
     if ($field['type'] === 'phone' || $field['type'] === 'contact') {
         $markup = $bot->getContactKeyboard("ارسال شماره تماس");
+    } elseif ($field['type'] === 'dropdown' && !empty($field['options_json'])) {
+        $options = json_decode($field['options_json'], true);
+        if ($options) {
+            $buttons = [];
+            foreach ($options as $idx => $opt) {
+                // bale inline keyboard needs rows, we will put each option on its own row 
+                // or two per row depending on length but let's do 1 per row for simplicity
+                $buttons[] = [['text' => $opt, 'callback_data' => "dd_ans:{$event_id}:{$step_index}:{$idx}"]];
+            }
+            $markup = $bot->getInlineKeyboard($buttons);
+        } else {
+            $markup = ['remove_keyboard' => true];
+        }
     } else {
         $markup = ['remove_keyboard' => true];
     }
@@ -200,7 +242,7 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
 
 function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answers) {
     global $bot, $eventManager, $regManager;
-    $fields = $eventManager->getEventFields($event_id);
+    $fields = $eventManager->getEventFields($event_id, true);
     
     if ($step_index >= count($fields)) return;
     $field = $fields[$step_index];
@@ -233,6 +275,14 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
     }
     
     // Validation rules (simple examples)
+    if ($value && $field['type'] === 'dropdown' && !empty($field['options_json'])) {
+        $options = json_decode($field['options_json'], true) ?: [];
+        if (!in_array($value, $options)) {
+            $err = $field['error_message'] ?: "لطفاً یکی از گزینه‌ها را انتخاب کنید.";
+            $bot->sendMessage($chat_id, $err);
+            return;
+        }
+    }
     if ($value && $field['type'] === 'number' && !is_numeric($value)) {
         $err = $field['error_message'] ?: "لطفا فقط عدد وارد کنید.";
         $bot->sendMessage($chat_id, $err);
@@ -259,7 +309,8 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
             $apiKey = $stmt->fetchColumn();
             
             if ($apiKey) {
-                $bot->sendMessage($chat_id, "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳", ['remove_keyboard' => true]);
+                $waitMsg = !empty(trim($event['ai_wait_message'])) ? $event['ai_wait_message'] : "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳";
+                $bot->sendMessage($chat_id, $waitMsg, ['remove_keyboard' => true]);
                 
                 $aiPrompt = replacePlaceholders($event['ai_prompt'] ?? '', $answers);
                 $userDataStr = json_encode($answers, JSON_UNESCAPED_UNICODE);

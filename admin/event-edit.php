@@ -8,7 +8,7 @@ $id = $_GET['id'] ?? null;
 $event = [
     'title' => '', 'slug' => '', 'description' => '', 'welcome_message' => '',
     'completion_message' => '', 'duplicate_message' => '', 'is_active' => 1, 'duplicate_setting' => 'allow',
-    'use_ai' => 0, 'ai_prompt' => ''
+    'use_ai' => 0, 'ai_prompt' => '', 'ai_wait_message' => ''
 ];
 
 if ($id) {
@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'is_active' => isset($_POST['is_active']) ? 1 : 0,
         'duplicate_setting' => $_POST['duplicate_setting'],
         'use_ai' => isset($_POST['use_ai']) ? 1 : 0,
-        'ai_prompt' => $_POST['ai_prompt'] ?? ''
+        'ai_prompt' => $_POST['ai_prompt'] ?? '',
+        'ai_wait_message' => $_POST['ai_wait_message'] ?? ''
     ];
 
     if ($id) {
@@ -96,9 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div id="ai_prompt_container" class="<?= $event['use_ai'] ? '' : 'hidden' ?>">
-                <label class="block text-[13px] font-medium text-[#475569] mb-2">پرامپت (دستورالعمل) هوش مصنوعی</label>
-                <textarea name="ai_prompt" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="مثال: بر اساس داده‌های دریافت شده زیر، یک رژیم غذایی مناسب برای شخص پیشنهاد بده."><?= htmlspecialchars($event['ai_prompt'] ?? '') ?></textarea>
-                <p class="text-xs text-[#64748b] mt-1">راهنما: اطلاعات وارد شده توسط کاربر در انتهای این پرامپت به هوش مصنوعی ارسال خواهد شد. در صورت فعال بودن هوش مصنوعی، پیام پایان فرم جایگزین پاسخ هوش مصنوعی خواهد شد.</p>
+                <div class="mb-4">
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">پرامپت (دستورالعمل) هوش مصنوعی</label>
+                    <textarea name="ai_prompt" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="مثال: بر اساس داده‌های دریافت شده زیر، یک رژیم غذایی مناسب برای شخص پیشنهاد بده."><?= htmlspecialchars($event['ai_prompt'] ?? '') ?></textarea>
+                    <p class="text-xs text-[#64748b] mt-1">راهنما: اطلاعات وارد شده توسط کاربر در انتهای این پرامپت به هوش مصنوعی ارسال خواهد شد. در صورت فعال بودن هوش مصنوعی، پیام پایان فرم جایگزین پاسخ هوش مصنوعی خواهد شد.</p>
+                </div>
+                <div>
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">متن انتظار پردازش هوش مصنوعی</label>
+                    <input type="text" name="ai_wait_message" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳" value="<?= htmlspecialchars($event['ai_wait_message'] ?? '') ?>">
+                </div>
             </div>
         </div>
 
