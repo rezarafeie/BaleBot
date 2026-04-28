@@ -1,6 +1,6 @@
 <?php
 if (file_exists('config.php')) {
-    echo "<!DOCTYPE html><html lang='fa' dir='rtl'><head><meta charset='UTF-8'><title>خطا</title><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-[#f8fafc] flex items-center justify-center min-h-screen text-[#1e293b] font-sans'><div class='bg-white p-8 rounded-xl border border-[#e2e8f0] shadow-sm max-w-md w-full text-center'><h1 class='text-xl font-bold mb-4 text-red-600'>سیستم قبلاً نصب شده است</h1><p class='text-[#475569] text-sm'>جهت نصب مجدد، فایل config.php را حذف کنید.</p></div></body></html>";
+    echo "<!DOCTYPE html><html lang='fa' dir='rtl'><head><meta charset='UTF-8'><title>خطا</title><link rel='stylesheet' href='assets/css/tailwind-compiled.css'></head><body class='bg-[#f8fafc] flex items-center justify-center min-h-screen text-[#1e293b] font-sans'><div class='bg-white p-8 rounded-xl border border-[#e2e8f0] shadow-sm max-w-md w-full text-center'><h1 class='text-xl font-bold mb-4 text-red-600'>سیستم قبلاً نصب شده است</h1><p class='text-[#475569] text-sm'>جهت نصب مجدد، فایل config.php را حذف کنید.</p></div></body></html>";
     exit;
 }
 ?>
@@ -10,7 +10,7 @@ if (file_exists('config.php')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نصب سیستم بات بله</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
     <style>
         body { font-family: Tahoma, Arial, sans-serif; }
     </style>

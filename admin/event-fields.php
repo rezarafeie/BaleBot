@@ -38,7 +38,7 @@ $fields = $em->getEventFields($event_id);
 
 <div class="mb-6 flex items-center bg-white p-5 rounded-xl border border-[#e2e8f0]">
     <a href="events.php" class="text-[#64748b] hover:text-[#1e293b] ml-4 transition-colors">
-        <i class="bi bi-arrow-right text-xl"></i>
+        <?= render_icon('arrow-right', 'text-xl') ?>
     </a>
     <h1 class="text-lg font-semibold text-[#1e293b]">فرم‌ساز: <?= htmlspecialchars($event['title']) ?></h1>
 </div>
@@ -130,14 +130,14 @@ $fields = $em->getEventFields($event_id);
                             </td>
                             <td class="p-4 text-center">
                                 <?php if ($f['is_required']): ?>
-                                    <i class="bi bi-check-circle-fill text-[#10b981]"></i>
+                                    <?= render_icon('check-circle-fill', 'text-[#10b981]') ?>
                                 <?php else: ?>
-                                    <i class="bi bi-x-circle text-[#cbd5e1]"></i>
+                                    <?= render_icon('x-circle', 'text-[#cbd5e1]') ?>
                                 <?php endif; ?>
                             </td>
                             <td class="p-4 text-center">
                                 <a href="?id=<?= $event_id ?>&delete=<?= $f['id'] ?>" onclick="return confirm('آیا از حذف این فیلد اطمینان دارید؟')" class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors inline-block">
-                                    <i class="bi bi-trash"></i>
+                                    <?= render_icon('trash') ?>
                                 </a>
                             </td>
                         </tr>

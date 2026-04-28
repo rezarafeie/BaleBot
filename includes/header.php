@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/classes/Auth.php';
+require_once dirname(__DIR__) . '/includes/icons.php';
 
 $auth = new Auth();
 $auth->requireLogin();
@@ -18,8 +19,7 @@ function url($path = '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پنل مدیریت ربات بله</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="flex h-screen overflow-hidden">

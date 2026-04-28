@@ -73,7 +73,7 @@ $media = $mm->getAllMedia();
                             <img src="..<?= $m['file_path'] ?>" class="h-28 w-full object-cover rounded-lg mb-3">
                             <?php else: ?>
                             <div class="h-28 w-full bg-[#f8fafc] rounded-lg mb-3 flex items-center justify-center text-[#94a3b8] group-hover:text-[#64748b] transition-colors border border-[#f1f5f9]">
-                                <i class="bi bi-file-earmark-<?= $m['file_type'] ?> text-4xl"></i>
+                                <?= render_icon('file-earmark', 'text-4xl w-10 h-10') ?>
                             </div>
                             <?php endif; ?>
                             <div class="text-center w-full">

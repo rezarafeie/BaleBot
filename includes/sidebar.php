@@ -14,16 +14,17 @@
                 function navLink($url, $icon, $label, $current_page) {
                     $isActive = $current_page === $url;
                     $bg = $isActive ? 'bg-[#eff6ff] text-blue-600 font-semibold' : 'text-[#64748b] hover:bg-gray-50';
-                    return "<a href='$url' class='flex items-center gap-3 px-4 py-3 rounded-lg text-sm $bg transition-colors'><i class='bi $icon text-lg'></i> $label</a>";
+                    $svg = render_icon($icon, 'text-lg');
+                    return "<a href='$url' class='flex items-center gap-3 px-4 py-3 rounded-lg text-sm $bg transition-colors'>$svg $label</a>";
                 }
             ?>
-            <li><?= navLink('dashboard.php', 'bi-house-door', 'پیشخوان', $current_page) ?></li>
-            <li><?= navLink('events.php', 'bi-calendar-event', 'مدیریت رویدادها', $current_page) ?></li>
-            <li><?= navLink('registrations.php', 'bi-card-list', 'لیست ثبت‌نام‌ها', $current_page) ?></li>
-            <li><?= navLink('users.php', 'bi-people', 'کاربران بات', $current_page) ?></li>
-            <li><?= navLink('broadcast.php', 'bi-megaphone', 'ارسال پیام انبوه', $current_page) ?></li>
-            <li><?= navLink('media.php', 'bi-images', 'کتابخانه رسانه', $current_page) ?></li>
-            <li><?= navLink('settings.php', 'bi-gear', 'تنظیمات سیستم', $current_page) ?></li>
+            <li><?= navLink('dashboard.php', 'house-door', 'پیشخوان', $current_page) ?></li>
+            <li><?= navLink('events.php', 'calendar-event', 'مدیریت رویدادها', $current_page) ?></li>
+            <li><?= navLink('registrations.php', 'card-list', 'لیست ثبت‌نام‌ها', $current_page) ?></li>
+            <li><?= navLink('users.php', 'people', 'کاربران بات', $current_page) ?></li>
+            <li><?= navLink('broadcast.php', 'megaphone', 'ارسال پیام انبوه', $current_page) ?></li>
+            <li><?= navLink('media.php', 'images', 'کتابخانه رسانه', $current_page) ?></li>
+            <li><?= navLink('settings.php', 'gear', 'تنظیمات سیستم', $current_page) ?></li>
         </ul>
     </nav>
     <div class="p-6 border-t border-[#f1f5f9] text-xs text-[#94a3b8]">

@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="mb-6 flex items-center bg-white p-5 rounded-xl border border-[#e2e8f0]">
     <a href="events.php" class="text-[#64748b] hover:text-[#1e293b] ml-4 transition-colors">
-        <i class="bi bi-arrow-right text-xl"></i>
+        <?= render_icon('arrow-right', 'text-xl') ?>
     </a>
     <h1 class="text-lg font-semibold text-[#1e293b]"><?= $id ? 'ویرایش رویداد' : 'رویداد جدید' ?></h1>
 </div>
