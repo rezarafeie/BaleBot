@@ -8,9 +8,17 @@ require_once __DIR__ . '/classes/BotManager.php';
 require_once __DIR__ . '/classes/Logger.php';
 
 // Determine Bot ID
-$bot_id = $_GET['bot_id'] ?? 1;
+$bot_id = $_GET['bot_id'] ?? null;
+$bot_user = $_GET['bot_user'] ?? null;
 $botManager = new BotManager();
-$botData = $botManager->getBot($bot_id);
+
+if ($bot_id) {
+    $botData = $botManager->getBot($bot_id);
+} elseif ($bot_user) {
+    $botData = $botManager->getBotByUsername($bot_user);
+} else {
+    $botData = $botManager->getBot(1); // Default for backward compatibility
+}
 
 if (!$botData) {
     http_response_code(404);

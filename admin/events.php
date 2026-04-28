@@ -2,11 +2,14 @@
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/classes/Auth.php';
 require_once dirname(__DIR__) . '/classes/EventManager.php';
+require_once dirname(__DIR__) . '/classes/BotManager.php';
 
 $auth = new Auth();
 $auth->requireLogin();
 
 $em = new EventManager();
+$bm = new BotManager();
+$bots = $bm->getBots();
 
 if (isset($_GET['delete'])) {
     $em->deleteEvent($_GET['delete']);

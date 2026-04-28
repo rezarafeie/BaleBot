@@ -59,6 +59,13 @@ class BotManager {
         return $stmt->fetch();
     }
 
+    public function getBotByUsername($username) {
+        $username = ltrim($username, '@');
+        $stmt = $this->db->prepare("SELECT * FROM bots WHERE username = ?");
+        $stmt->execute([$username]);
+        return $stmt->fetch();
+    }
+
     public function createBot($name, $username, $token) {
         $stmt = $this->db->prepare("INSERT INTO bots (name, username, token) VALUES (?, ?, ?)");
         $stmt->execute([$name, $username, $token]);
