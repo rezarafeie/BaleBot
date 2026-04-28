@@ -28,7 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'duplicate_setting' => $_POST['duplicate_setting'],
         'use_ai' => isset($_POST['use_ai']) ? 1 : 0,
         'ai_prompt' => $_POST['ai_prompt'] ?? '',
-        'ai_wait_message' => $_POST['ai_wait_message'] ?? ''
+        'ai_wait_message' => $_POST['ai_wait_message'] ?? '',
+        'action_type' => $_POST['action_type'] ?? 'none',
+        'action_webhook_url' => $_POST['action_webhook_url'] ?? '',
+        'action_webhook_body' => $_POST['action_webhook_body'] ?? '',
+        'action_http_url' => $_POST['action_http_url'] ?? ''
     ];
 
     if ($id) {
@@ -112,6 +116,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <script>
         document.getElementById('use_ai').addEventListener('change', function() {
             document.getElementById('ai_prompt_container').classList.toggle('hidden', !this.checked);
+        });
+        </script>
+
+        <div class="border-t border-[#f1f5f9] mb-6"></div>
+
+        <h3 class="text-base font-semibold text-[#1e293b] mb-5">ارسال اطلاعات پس از تکمیل ثبت‌نام (ورکشاپ / وب‌هوک / API)</h3>
+        
+        <div class="mb-5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                <div>
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">نوع اقدام پشتیبان</label>
+                    <select name="action_type" id="action_type" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
+                        <option value="none" <?= ($event['action_type'] ?? 'none') == 'none' ? 'selected' : '' ?>>بدون اقدام</option>
+                        <option value="webhook" <?= ($event['action_type'] ?? 'none') == 'webhook' ? 'selected' : '' ?>>ارسال به Webhook (POST)</option>
+                        <option value="http_request" <?= ($event['action_type'] ?? 'none') == 'http_request' ? 'selected' : '' ?>>ارسال HTTP Request (GET/POST سفارشی)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="webhook_container" class="<?= ($event['action_type'] ?? 'none') == 'webhook' ? '' : 'hidden' ?> p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                <h4 class="font-medium text-sm text-gray-700 mb-3">تنظیمات وب‌هوک (Webhook)</h4>
+                <div class="mb-4">
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">آدرس (URL) وب‌هوک</label>
+                    <input type="text" name="action_webhook_url" value="<?= htmlspecialchars($event['action_webhook_url'] ?? '') ?>" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-white transition-colors text-left" dir="ltr" placeholder="https://domain.com/webhook">
+                </div>
+                <div>
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">بدنه سفارشی (JSON) اختیاری</label>
+                    <textarea name="action_webhook_body" rows="4" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm font-mono text-[#1e293b] focus:outline-none focus:border-blue-500 bg-white transition-colors text-left" dir="ltr" placeholder='{"receptor": "{phone}", "token": "ثبت‌نام {event_title}"}'><?= htmlspecialchars($event['action_webhook_body'] ?? '') ?></textarea>
+                    <p class="text-[11px] text-[#64748b] mt-2 leading-relaxed">
+                        راهنما: اگر خالی باشد کل مقادیر ثبت‌نام بصورت آرایه JSON ارسال می‌شود. می‌توانید با فرمت JSON بالا مقادیر را دلخواه تنظیم کنید.<br>
+                        متغیرهای مجاز: <code>{field_key}</code> کلیدهای تعریف شده (مثل <code>{phone}</code>), <code>{chat_id}</code>, <code>{event_id}</code>, <code>{event_title}</code>
+                    </p>
+                </div>
+            </div>
+
+            <div id="http_request_container" class="<?= ($event['action_type'] ?? 'none') == 'http_request' ? '' : 'hidden' ?> p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                <h4 class="font-medium text-sm text-gray-700 mb-3">تنظیمات HTTP Request سفارشی</h4>
+                <div>
+                    <label class="block text-[13px] font-medium text-[#475569] mb-2">آدرس (URL) درخواست HTTP</label>
+                    <textarea name="action_http_url" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm font-mono text-[#1e293b] focus:outline-none focus:border-blue-500 bg-white transition-colors text-left" dir="ltr" placeholder="https://api.kavenegar.com/v1/API_KEY/verify/lookup.json?receptor={phone}&token={event_title}&template=webinarlogin"><?= htmlspecialchars($event['action_http_url'] ?? '') ?></textarea>
+                    <p class="text-[11px] text-[#64748b] mt-2 leading-relaxed">
+                        راهنما: بصورت پیش‌فرض درخواست GET ارسال می‌شود. از متغیرهای دریافتی درون URL استفاده کنید.<br>
+                        متغیرهای مجاز: <code>{field_key}</code> کلیدهای تعریف شده (مثل <code>{phone}</code>), <code>{chat_id}</code>, <code>{event_id}</code>, <code>{event_title}</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        document.getElementById('action_type').addEventListener('change', function() {
+            document.getElementById('webhook_container').classList.add('hidden');
+            document.getElementById('http_request_container').classList.add('hidden');
+            
+            if (this.value === 'webhook') {
+                document.getElementById('webhook_container').classList.remove('hidden');
+            } else if (this.value === 'http_request') {
+                document.getElementById('http_request_container').classList.remove('hidden');
+            }
         });
         </script>
 

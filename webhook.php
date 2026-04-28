@@ -307,6 +307,9 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         
         $event = $eventManager->getEvent($event_id);
         
+        // Trigger completion actions if configured
+        triggerCompletionAction($event, $answers, $chat_id);
+        
         if ($event['use_ai']) {
             global $db;
             $stmt = $db->query("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key'");
@@ -365,4 +368,63 @@ function callGapGPT($prompt, $apiKey) {
     
     $decoded = json_decode($response, true);
     return $decoded['choices'][0]['message']['content'] ?? false;
+}
+
+function triggerCompletionAction($event, $answers, $chat_id) {
+    if (!isset($event['action_type']) || $event['action_type'] === 'none') {
+        return;
+    }
+    
+    // Add built-ins
+    $answers['chat_id'] = $chat_id;
+    $answers['event_id'] = $event['id'] ?? '';
+    $answers['event_title'] = $event['title'] ?? '';
+    
+    if ($event['action_type'] === 'webhook' && !empty($event['action_webhook_url'])) {
+        $url = $event['action_webhook_url'];
+        
+        if (!empty($event['action_webhook_body'])) {
+            $bodyStr = replacePlaceholders($event['action_webhook_body'], $answers);
+            $payload = $bodyStr;
+        } else {
+            $payload = json_encode($answers, JSON_UNESCAPED_UNICODE);
+        }
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+        
+        Logger::log('webhook', 'Webhook Response', [
+            'url' => $url,
+            'payload' => json_decode($payload, true) ?: $payload,
+            'response' => $res,
+            'error' => $err
+        ]);
+        
+    } elseif ($event['action_type'] === 'http_request' && !empty($event['action_http_url'])) {
+        $urlTemplate = $event['action_http_url'];
+        // URL encode the replaced values so they are safe in query string
+        $safeAnswers = [];
+        foreach ($answers as $k => $v) {
+            $safeAnswers[$k] = urlencode($v);
+        }
+        $url = replacePlaceholders($urlTemplate, $safeAnswers);
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+        
+        Logger::log('api', 'HTTP Action Response', [
+            'url' => $url,
+            'response' => $res,
+            'error' => $err
+        ]);
+    }
 }

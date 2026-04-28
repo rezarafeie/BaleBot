@@ -11,6 +11,10 @@ class EventManager {
         try { $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `action_type` VARCHAR(50) DEFAULT 'none'"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_url` TEXT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_body` TEXT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `action_http_url` TEXT NULL"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
         
         try {
@@ -36,7 +40,7 @@ class EventManager {
     }
 
     public function createEvent($data) {
-        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (title, slug, description, welcome_message, completion_message, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -48,13 +52,17 @@ class EventManager {
             $data['duplicate_setting'],
             $data['use_ai'] ? 1 : 0,
             $data['ai_prompt'] ?? '',
-            $data['ai_wait_message'] ?? ''
+            $data['ai_wait_message'] ?? '',
+            $data['action_type'] ?? 'none',
+            $data['action_webhook_url'] ?? '',
+            $data['action_webhook_body'] ?? '',
+            $data['action_http_url'] ?? ''
         ]);
         return $this->db->lastInsertId();
     }
 
     public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, completion_message=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=? WHERE id=?");
         return $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -67,6 +75,10 @@ class EventManager {
             $data['use_ai'] ? 1 : 0,
             $data['ai_prompt'] ?? '',
             $data['ai_wait_message'] ?? '',
+            $data['action_type'] ?? 'none',
+            $data['action_webhook_url'] ?? '',
+            $data['action_webhook_body'] ?? '',
+            $data['action_http_url'] ?? '',
             $id
         ]);
     }
