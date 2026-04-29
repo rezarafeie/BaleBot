@@ -95,7 +95,7 @@ class RegistrationManager {
         $reg_id = $this->db->lastInsertId();
 
         $answers = json_decode($answers_json, true) ?: [];
-        $stmt_ans = $this->db->prepare("INSERT INTO registration_answers (registration_id, field_key, field_value) VALUES (?, ?, ?)");
+        $stmt_ans = $this->db->prepare("INSERT INTO registration_answers (registration_id, field_key, field_value, bot_id) VALUES (?, ?, ?, ?)");
         
         // Also update contact info in bot_users if phone was provided
         $phone_to_update = null;
@@ -103,10 +103,15 @@ class RegistrationManager {
 
         foreach ($answers as $k => $v) {
             $val_str = is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : (string)$v;
-            $stmt_ans->execute([$reg_id, $k, $val_str]);
+            $stmt_ans->execute([$reg_id, $k, $val_str, $bot_id]);
 
-            if ($k === 'phone' || $k === 'phone_number') $phone_to_update = $val_str;
-            if ($k === 'name' || $k === 'full_name' || $k === 'first_name') $name_to_update = $val_str;
+            $k_lower = strtolower($k);
+            if (strpos($k_lower, 'phone') !== false || strpos($k_lower, 'شماره') !== false) {
+                $phone_to_update = $val_str;
+            }
+            if (strpos($k_lower, 'name') !== false || strpos($k_lower, 'نام') !== false) {
+                $name_to_update = $val_str;
+            }
         }
 
         if ($phone_to_update || $name_to_update) {
@@ -115,15 +120,16 @@ class RegistrationManager {
             if ($name_to_update) { $q .= "name = ?, "; $params[] = $name_to_update; }
             if ($phone_to_update) { $q .= "phone = ?, "; $params[] = $phone_to_update; }
             $q = rtrim($q, ", ");
-            $q .= " WHERE chat_id = ?";
+            $q .= " WHERE chat_id = ? AND bot_id = ?";
             $params[] = $chat_id;
+            $params[] = $bot_id;
             $this->db->prepare($q)->execute($params);
         }
 
         return $reg_id;
     }
 
-    public function checkDuplicate($chat_id, $event_id, $setting) {
+    public function checkDuplicate($chat_id, $event_id, $setting, $bot_id = null) {
         if ($setting == 'allow') return false;
         
         if ($setting == 'block_chat_id') {
@@ -134,8 +140,8 @@ class RegistrationManager {
 
         if ($setting == 'block_phone') {
             // Need phone from bot_users to check accurately
-            $stmt = $this->db->prepare("SELECT phone FROM bot_users WHERE chat_id = ?");
-            $stmt->execute([$chat_id]);
+            $stmt = $this->db->prepare("SELECT phone FROM bot_users WHERE chat_id = ? AND bot_id = ?");
+            $stmt->execute([$chat_id, $bot_id]);
             $phone = $stmt->fetchColumn();
             
             if ($phone) {

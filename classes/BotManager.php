@@ -31,6 +31,19 @@ class BotManager {
         try { $this->db->exec("ALTER TABLE `user_states` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `broadcasts` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `media_files` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
+
+        // Fix constraints for multi-bot
+        try {
+            // bot_users unique constraint
+            try { $this->db->exec("ALTER TABLE `bot_users` DROP INDEX `chat_id` "); } catch(PDOException $ex) {}
+            try { $this->db->exec("ALTER TABLE `bot_users` ADD UNIQUE KEY `chat_bot` (`chat_id`, `bot_id`) "); } catch(PDOException $ex) {}
+        } catch(PDOException $e) {}
+
+        try {
+            // user_states unique constraint
+            try { $this->db->exec("ALTER TABLE `user_states` DROP INDEX `chat_id` "); } catch(PDOException $ex) {}
+            try { $this->db->exec("ALTER TABLE `user_states` ADD UNIQUE KEY `chat_bot` (`chat_id`, `bot_id`) "); } catch(PDOException $ex) {}
+        } catch(PDOException $e) {}
         
         // Media support for all messages
         try { $this->db->exec("ALTER TABLE `events` ADD `welcome_media_id` INT DEFAULT NULL"); } catch(PDOException $e) {}

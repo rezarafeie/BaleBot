@@ -266,7 +266,7 @@ function startEvent($chat_id, $event) {
     global $bot, $regManager, $eventManager, $bot_id;
 
     // Check duplicate
-    if ($regManager->checkDuplicate($chat_id, $event['id'], $event['duplicate_setting'])) {
+    if ($regManager->checkDuplicate($chat_id, $event['id'], $event['duplicate_setting'], $bot_id)) {
         $msg = $event['duplicate_message'] ?: "شما قبلا در این رویداد ثبت‌نام کرده‌اید.";
         $bot->sendMessage($chat_id, $msg, ['remove_keyboard' => true]);
         return;
