@@ -56,8 +56,8 @@ function url($path = '') {
         <!-- Top bar -->
         <header class="h-[80px] bg-white border-b border-[#e2e8f0] flex items-center justify-between px-6 md:px-8 shrink-0">
             <div class="flex items-center gap-4 md:gap-6">
-                <!-- Burger Menu Mobile -->
-                <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+                <!-- Burger Menu -->
+                <button onclick="toggleSidebar()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
                     <?= render_icon('list', 'text-2xl') ?>
                 </button>
 

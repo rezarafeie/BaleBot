@@ -56,13 +56,19 @@ if (isset($_GET['export_csv'])) {
             $r['id'],
             $r['event_title'],
             $r['user_name'] ?? '-',
-            $r['user_phone'] ?? '-',
-            $r['chat_id'],
+            '="' . ($r['user_phone'] ?? '-') . '"',
+            '="' . $r['chat_id'] . '"',
             $r['created_at']
         ];
         $ans = $parsed_answers[$r['id']];
         foreach ($dynamic_keys as $dk) {
-            $val = isset($ans[$dk]) ? (is_array($ans[$dk]) ? json_encode($ans[$dk], JSON_UNESCAPED_UNICODE) : $ans[$dk]) : '';
+            $raw_val = isset($ans[$dk]) ? (is_array($ans[$dk]) ? json_encode($ans[$dk], JSON_UNESCAPED_UNICODE) : $ans[$dk]) : '';
+            // If it's a long number (like a phone), wrap it for Excel
+            if (is_numeric($raw_val) && strlen($raw_val) > 9) {
+                $val = '="' . $raw_val . '"';
+            } else {
+                $val = $raw_val;
+            }
             $row[] = $val;
         }
         fputcsv($fp, $row);
