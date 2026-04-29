@@ -5,10 +5,12 @@ require_once __DIR__ . '/Logger.php';
 class BaleBot {
     private $token;
     private $apiUrl;
+    private $bot_id;
 
-    public function __construct($token = null) {
+    public function __construct($token = null, $bot_id = 1) {
         $this->token = $token ?: BOT_TOKEN;
         $this->apiUrl = "https://tapi.bale.ai/bot{$this->token}/";
+        $this->bot_id = $bot_id;
     }
 
     private function request($method, $data = []) {
@@ -42,9 +44,9 @@ class BaleBot {
         if (curl_errno($ch)) {
             $err = curl_error($ch);
             error_log('BaleBot Request Error: ' . $err);
-            Logger::log('api', "BaleBot Request Error: " . $err, ['method' => $method, 'data' => $data]);
+            Logger::log('api', "BaleBot Request Error: " . $err, ['method' => $method, 'data' => $data], $this->bot_id);
         } else {
-            Logger::log('api', "BaleBot API: " . $method, ['data' => $data, 'response' => json_decode($response, true) ?: $response]);
+            Logger::log('api', "BaleBot API: " . $method, ['data' => $data, 'response' => json_decode($response, true) ?: $response], $this->bot_id);
         }
         curl_close($ch);
         

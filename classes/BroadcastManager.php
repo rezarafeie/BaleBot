@@ -70,7 +70,7 @@ class BroadcastManager {
         $bot_id = $b['bot_id'];
         require_once __DIR__ . '/BotManager.php';
         $botData = (new BotManager())->getBot($bot_id);
-        $bot = new BaleBot($botData['token'] ?? null);
+        $bot = new BaleBot($botData['token'] ?? null, $bot_id);
 
         $this->db->prepare("UPDATE broadcasts SET status = 'sending' WHERE id = ?")->execute([$broadcast_id]);
         

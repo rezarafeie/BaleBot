@@ -31,6 +31,7 @@ class BotManager {
         try { $this->db->exec("ALTER TABLE `user_states` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `broadcasts` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `media_files` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `system_logs` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
 
         // Fix constraints for multi-bot
         try {
@@ -53,10 +54,30 @@ class BotManager {
         
         // Settings needs a bot_id to differentiate settings per bot
         try { 
-            $this->db->exec("ALTER TABLE `settings` ADD `bot_id` INT DEFAULT 1"); 
-            try { $this->db->exec("ALTER TABLE `settings` DROP INDEX `setting_key` "); } catch(PDOException $ex) {}
-            try { $this->db->exec("ALTER TABLE `settings` ADD UNIQUE KEY `bot_setting` (`bot_id`, `setting_key`) "); } catch(PDOException $ex) {}
+            // 1. Add bot_id if missing
+            $exists = $this->db->query("SHOW COLUMNS FROM `settings` LIKE 'bot_id'")->fetch();
+            if (!$exists) {
+                $this->db->exec("ALTER TABLE `settings` ADD `bot_id` INT DEFAULT 1");
+            }
+            
+            // 2. Check if setting_key is still the only PK
+            $pk = $this->db->query("SHOW KEYS FROM `settings` WHERE Key_name = 'PRIMARY'")->fetchAll();
+            $isComposite = false;
+            foreach ($pk as $key) {
+                if ($key['Column_name'] === 'bot_id') {
+                    $isComposite = true;
+                    break;
+                }
+            }
+            
+            if (!$isComposite) {
+                try { $this->db->exec("ALTER TABLE `settings` DROP PRIMARY KEY"); } catch(PDOException $ex) {}
+                try { $this->db->exec("ALTER TABLE `settings` ADD PRIMARY KEY (`bot_id`, `setting_key`) "); } catch(PDOException $ex) {}
+            }
         } catch(PDOException $e) {}
+        
+        try { $this->db->exec("CREATE INDEX idx_logs_bot ON system_logs(bot_id)"); } catch(PDOException $e) {}
+        try { $this->db->exec("CREATE INDEX idx_media_bot ON media_files(bot_id)"); } catch(PDOException $e) {}
 
         $this->syncPhysicalBots();
     }
@@ -130,6 +151,10 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         $id = $this->db->lastInsertId();
         if ($id) {
             $this->ensureWebhookFile($username);
+            // Default settings for the new bot
+            $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'webhook_url', '')")->execute([$id]);
+            $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_api_key', '')")->execute([$id]);
+            $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'event_selection_text', '')")->execute([$id]);
         }
         return $id;
     }

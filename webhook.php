@@ -37,7 +37,7 @@ if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
 
 $input = file_get_contents('php://input');
 if (trim($input)) {
-    Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', json_decode($input, true) ?: ['raw' => $input]);
+    Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', json_decode($input, true) ?: ['raw' => $input], $bot_id);
 }
 $update = json_decode($input, true);
 
@@ -46,7 +46,7 @@ if (!$update) {
     exit;
 }
 
-$bot = new BaleBot($botData['token']);
+$bot = new BaleBot($botData['token'], $bot_id);
 $eventManager = new EventManager();
 $regManager = new RegistrationManager();
 
@@ -535,7 +535,7 @@ function triggerCompletionAction($event, $answers, $chat_id) {
             'payload' => json_decode($payload, true) ?: $payload,
             'response' => $res,
             'error' => $err
-        ]);
+        ], $bot_id);
         
     } elseif ($event['action_type'] === 'http_request' && !empty($event['action_http_url'])) {
         $urlTemplate = trim($event['action_http_url']);
@@ -576,6 +576,6 @@ function triggerCompletionAction($event, $answers, $chat_id) {
             'url' => $url,
             'response' => $res,
             'error' => $err
-        ]);
+        ], $bot_id);
     }
 }

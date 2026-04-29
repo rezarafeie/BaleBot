@@ -18,8 +18,8 @@ class RegistrationManager {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     }
 
-    public function getUserState($chat_id, $bot_id = null) {
-        $key = $bot_id ? "{$chat_id}_{$bot_id}" : $chat_id;
+    public function getUserState($chat_id, $bot_id = 1) {
+        $key = "{$chat_id}_{$bot_id}";
         $cachePath = dirname(__DIR__) . "/data/states/{$key}.json";
         if (file_exists($cachePath)) {
             $data = json_decode(file_get_contents($cachePath), true);
@@ -29,14 +29,8 @@ class RegistrationManager {
         }
         
         // Fallback to DB
-        $sql = "SELECT * FROM user_states WHERE chat_id = ?";
-        $params = [$chat_id];
-        if ($bot_id) {
-            $sql .= " AND bot_id = ?";
-            $params[] = $bot_id;
-        }
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt = $this->db->prepare("SELECT * FROM user_states WHERE chat_id = ? AND bot_id = ?");
+        $stmt->execute([$chat_id, $bot_id]);
         $data = $stmt->fetch();
         if ($data) {
             $data['updated_at_timestamp'] = strtotime($data['updated_at']);
@@ -44,11 +38,7 @@ class RegistrationManager {
         return $data;
     }
 
-    public function setState($chat_id, $event_id, $step_index, $answers_json, $status, $bot_id = null) {
-        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
-            $bot_id = $_SESSION['selected_bot_id'];
-        }
-        
+    public function setState($chat_id, $event_id, $step_index, $answers_json, $status, $bot_id = 1) {
         $data = [
             'chat_id' => $chat_id,
             'bot_id' => $bot_id,
@@ -62,27 +52,30 @@ class RegistrationManager {
         
         $dir = dirname(__DIR__) . "/data/states";
         if (!is_dir($dir)) @mkdir($dir, 0777, true);
-        $key = $bot_id ? "{$chat_id}_{$bot_id}" : $chat_id;
+        $key = "{$chat_id}_{$bot_id}";
         file_put_contents("{$dir}/{$key}.json", json_encode($data));
+
+        // Sync with DB
+        $stmt = $this->db->prepare("INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
+                                   VALUES (?, ?, ?, ?, ?, ?, NOW()) 
+                                   ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=NOW()");
+        $stmt->execute([
+            $chat_id, $bot_id, $event_id, $step_index, $answers_json, $status,
+            $event_id, $step_index, $answers_json, $status
+        ]);
 
         return true;
     }
 
-    public function clearState($chat_id, $bot_id = null) {
-        $key = $bot_id ? "{$chat_id}_{$bot_id}" : $chat_id;
+    public function clearState($chat_id, $bot_id = 1) {
+        $key = "{$chat_id}_{$bot_id}";
         $cachePath = dirname(__DIR__) . "/data/states/{$key}.json";
         if (file_exists($cachePath)) {
             @unlink($cachePath);
         }
         // Also clear in DB just in case
-        $sql = "DELETE FROM user_states WHERE chat_id = ?";
-        $params = [$chat_id];
-        if ($bot_id) {
-            $sql .= " AND bot_id = ?";
-            $params[] = $bot_id;
-        }
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        $stmt = $this->db->prepare("DELETE FROM user_states WHERE chat_id = ? AND bot_id = ?");
+        $stmt->execute([$chat_id, $bot_id]);
         return true;
     }
 

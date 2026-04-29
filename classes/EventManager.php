@@ -16,11 +16,6 @@ class EventManager {
         try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_body` TEXT NULL"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `events` ADD `action_http_url` TEXT NULL"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
-        
-        try {
-            $this->db->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('gapgpt_api_key', '')");
-            $this->db->exec("INSERT IGNORE INTO `settings` (`setting_key`, `setting_value`) VALUES ('event_selection_text', '')");
-        } catch(PDOException $e) {}
     }
 
     public function syncCache($bot_id = null) {
