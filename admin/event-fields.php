@@ -32,7 +32,7 @@ if ($edit_field_id) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'add_field' || $_POST['action'] === 'edit_field') {
         $options_json = null;
-        if ($_POST['type'] === 'dropdown' && !empty($_POST['options_text'])) {
+        if (in_array($_POST['type'], ['dropdown', 'channel_membership']) && !empty($_POST['options_text'])) {
             $opts = array_map('trim', explode("\n", $_POST['options_text']));
             $opts = array_filter($opts);
             if (!empty($opts)) {
@@ -98,29 +98,44 @@ $fields = $em->getEventFields($event_id);
                             <option value="contact" <?= ($editing_field['type']??'') === 'contact' ? 'selected' : '' ?>>دریافت شماره تماس (دکمه شیشه‌ای بله)</option>
                             <option value="photo" <?= ($editing_field['type']??'') === 'photo' ? 'selected' : '' ?>>تصویر</option>
                             <option value="document" <?= ($editing_field['type']??'') === 'document' ? 'selected' : '' ?>>فایل</option>
+                            <option value="channel_membership" <?= ($editing_field['type']??'') === 'channel_membership' ? 'selected' : '' ?>>عضویت در کانال</option>
                         </select>
                     </div>
 
                     <?php 
                         $optsText = '';
-                        if ($editing_field && $editing_field['type'] === 'dropdown' && !empty($editing_field['options_json'])) {
+                        if ($editing_field && in_array($editing_field['type'], ['dropdown', 'channel_membership']) && !empty($editing_field['options_json'])) {
                             $optsArray = json_decode($editing_field['options_json'], true) ?: [];
                             $optsText = implode("\n", $optsArray);
                         }
                     ?>
-                    <div class="mb-4 <?= ($editing_field['type']??'') === 'dropdown' ? '' : 'hidden' ?>" id="options_text_container">
-                        <label class="block text-sm font-medium text-[#475569] mb-2">گزینه‌ها (هر خط یک گزینه)</label>
-                        <textarea name="options_text" id="options_text" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="گزینه اول&#nگزینه دوم&#nگزینه سوم"><?= htmlspecialchars($optsText) ?></textarea>
+                    <div class="mb-4 <?= in_array(($editing_field['type']??''), ['dropdown', 'channel_membership']) ? '' : 'hidden' ?>" id="options_text_container">
+                        <label class="block text-sm font-medium text-[#475569] mb-2" id="options_label">گزینه‌ها</label>
+                        <textarea name="options_text" id="options_text" rows="3" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors" placeholder="گزینه‌ها را وارد کنید"><?= htmlspecialchars($optsText) ?></textarea>
+                        <p id="options_hint" class="text-xs text-[#64748b] mt-1"></p>
                     </div>
 
                     <script>
-                    document.getElementById('field_type').addEventListener('change', function() {
-                        if (this.value === 'dropdown') {
-                            document.getElementById('options_text_container').classList.remove('hidden');
+                    function updateOptionsDisplay() {
+                        const type = document.getElementById('field_type').value;
+                        const container = document.getElementById('options_text_container');
+                        const label = document.getElementById('options_label');
+                        const hint = document.getElementById('options_hint');
+                        
+                        if (type === 'dropdown') {
+                            container.classList.remove('hidden');
+                            label.innerText = 'گزینه‌ها (هر خط یک گزینه)';
+                            hint.innerText = '';
+                        } else if (type === 'channel_membership') {
+                            container.classList.remove('hidden');
+                            label.innerText = 'شناسه یا آیدی کانال';
+                            hint.innerText = 'مثال: @mychannel یا -100123456789. ربات باید در کانال ادمین باشد.';
                         } else {
-                            document.getElementById('options_text_container').classList.add('hidden');
+                            container.classList.add('hidden');
                         }
-                    });
+                    }
+                    document.getElementById('field_type').addEventListener('change', updateOptionsDisplay);
+                    updateOptionsDisplay();
                     </script>
 
                     <div class="mb-4">

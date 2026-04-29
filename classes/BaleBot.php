@@ -114,6 +114,13 @@ class BaleBot {
         return $this->request('getFile', ['file_id' => $file_id]);
     }
 
+    public function getChatMember($chat_id, $user_id) {
+        return $this->request('getChatMember', [
+            'chat_id' => (string)$chat_id,
+            'user_id' => (int)$user_id
+        ]);
+    }
+
     // Helper to generate Contact Keyboard
     public function getContactKeyboard($text = "ارسال شماره تماس") {
         return [

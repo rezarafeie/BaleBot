@@ -196,8 +196,50 @@ function handleCallbackQuery($cq) {
                             'chat' => ['id' => $chat_id],
                             'from' => $cq['from'] ?? []
                         ];
-                        $answers = json_decode($stateInfo['answers_json'] ?? '{}', true) ?: [];
+                $answers = json_decode($stateInfo['answers_json'] ?? '{}', true) ?: [];
                         processRegistrationStep($chat_id, $mockMsg, $event_id, $step_index, $answers);
+                    }
+                }
+            }
+        }
+    } elseif (strpos($data, 'check_join:') === 0) {
+        $parts = explode(':', $data);
+        if (count($parts) == 3) {
+            $event_id = $parts[1];
+            $step_index = $parts[2];
+            
+            $stateInfo = $regManager->getUserState($chat_id, $bot_id);
+            if ($stateInfo && ($stateInfo['status'] ?? '') === 'registering' && 
+                ($stateInfo['current_event_id'] ?? null) == $event_id && 
+                ($stateInfo['current_step_index'] ?? 0) == $step_index) {
+                
+                $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
+                $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
+                if (isset($fields[$step_index]) && $fields[$step_index]['type'] === 'channel_membership') {
+                    $channel = json_decode($fields[$step_index]['options_json'], true)[0] ?? '';
+                    $bale_user_id = $cq['from']['id'] ?? null;
+                    
+                    if ($bale_user_id && $channel) {
+                        $res = $bot->getChatMember($channel, $bale_user_id);
+                        $status = $res['result']['status'] ?? 'left';
+                        $is_member = in_array($status, ['member', 'creator', 'administrator']);
+                        
+                        if ($is_member) {
+                            $bot->answerCallbackQuery($cq['id'], "عضویت تایید شد ✅");
+                            $mockMsg = [
+                                'text' => 'عضویت تایید شد',
+                                'chat' => ['id' => $chat_id],
+                                'from' => $cq['from'] ?? [],
+                                'is_checked_join' => true // custom flag
+                            ];
+                            $answers = json_decode($stateInfo['answers_json'] ?? '{}', true) ?: [];
+                            processRegistrationStep($chat_id, $mockMsg, $event_id, $step_index, $answers);
+                        } else {
+                            $warn = $fields[$step_index]['error_message'] ?: "شما هنوز عضو کانال نشده‌اید. لطفاً ابتدا عضو شوید و سپس دکمه بررسی را بزنید.";
+                            $bot->answerCallbackQuery($cq['id'], $warn, true);
+                        }
+                    } else {
+                        $bot->answerCallbackQuery($cq['id'], "خطا در دریافت اطلاعات کاربر یا کانال.", true);
                     }
                 }
             }
@@ -328,14 +370,22 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
         if ($options) {
             $buttons = [];
             foreach ($options as $idx => $opt) {
-                // bale inline keyboard needs rows, we will put each option on its own row 
-                // or two per row depending on length but let's do 1 per row for simplicity
                 $buttons[] = [['text' => $opt, 'callback_data' => "dd_ans:{$event_id}:{$step_index}:{$idx}"]];
             }
             $markup = $bot->getInlineKeyboard($buttons);
         } else {
             $markup = ['remove_keyboard' => true];
         }
+    } elseif ($field['type'] === 'channel_membership' && !empty($field['options_json'])) {
+        $channel = json_decode($field['options_json'], true)[0] ?? '';
+        $joinLink = strpos($channel, '@') === 0 ? "https://ble.ir/" . substr($channel, 1) : null;
+        
+        $buttons = [];
+        if ($joinLink) {
+            $buttons[] = [['text' => "ورود به کانال 📢", 'url' => $joinLink]];
+        }
+        $buttons[] = [['text' => "عضو شدم، بررسی کن ✅", 'callback_data' => "check_join:{$event_id}:{$step_index}"]];
+        $markup = $bot->getInlineKeyboard($buttons);
     } else {
         $markup = ['remove_keyboard' => true];
     }
@@ -372,11 +422,31 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         $value = $msg['video']['file_id'];
     } elseif ($field['type'] === 'voice' && isset($msg['voice'])) {
         $value = $msg['voice']['file_id'];
+    } elseif ($field['type'] === 'channel_membership') {
+        if (isset($msg['is_checked_join']) && $msg['is_checked_join'] === true) {
+            $value = 'Joined';
+        } else {
+            // User sent text instead of using button, try to verify now
+            $channel = json_decode($field['options_json'], true)[0] ?? '';
+            $bale_user_id = $msg['from']['id'] ?? null;
+            if ($bale_user_id && $channel) {
+                $res = $bot->getChatMember($channel, $bale_user_id);
+                $status = $res['result']['status'] ?? 'left';
+                if (in_array($status, ['member', 'creator', 'administrator'])) {
+                    $value = 'Joined';
+                }
+            }
+        }
     } else {
         $value = $msg['text'] ?? null;
     }
 
     if ($field['is_required'] && empty($value)) {
+        if ($field['type'] === 'channel_membership') {
+            $err = $field['error_message'] ?: "شما هنوز عضو کانال نشده‌اید. لطفاً ابتدا از طریق دکمه زیر عضو شوید و سپس روی 'عضو شدم' بزنید.";
+            askStep($chat_id, $event_id, $step_index, $answers); 
+            return;
+        }
         $err = $field['error_message'] ?: "مقدار وارد شده معتبر نیست. لطفاً دوباره ارسال کنید.";
         $bot->sendMessage($chat_id, $err);
         return; // wait for valid input
