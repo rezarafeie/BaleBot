@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/BaleBot.php';
 require_once __DIR__ . '/../classes/Auth.php';
+require_once __DIR__ . '/../classes/GapGPT.php';
 
 $auth = new Auth();
 $db = Database::getInstance()->getConnection();
@@ -30,9 +31,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['save_gapgpt'])) {
         $key = $_POST['gapgpt_api_key'] ?? '';
+        $model = $_POST['gapgpt_model'] ?? 'gemini-2.5-flash-lite';
         $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_api_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
         $stmt->execute([$bot_id, $key, $key]);
-        $msg = "کلید API GapGPT ذخیره شد.";
+        $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_model', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+        $stmt->execute([$bot_id, $model, $model]);
+        $msg = "تنظیمات GapGPT ذخیره شد.";
+    } elseif (isset($_POST['test_gapgpt'])) {
+        $key = $_POST['gapgpt_api_key'] ?? '';
+        $model = $_POST['gapgpt_model'] ?? 'gemini-2.5-flash-lite';
+        
+        if (empty($key)) {
+            $msg = "خطا: لطفا ابتدا کلید API را وارد کنید.";
+        } else {
+            $content = GapGPT::call("سلام، یک پاسخ کوتاه بده.", $key, $model);
+            if ($content !== false) {
+                $msg = "اتصال موفقیت‌آمیز بود! ✅ پاسخ هوش مصنوعی: " . $content;
+            } else {
+                $msg = "خطا در اتصال: ❌ لطفاً کلید API و تنظیمات را بررسی کنید.";
+            }
+        }
     } elseif (isset($_POST['save_event_selection'])) {
         $text = $_POST['event_selection_text'] ?? '';
         $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'event_selection_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
@@ -50,9 +68,14 @@ $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'ga
 $stmt->execute([$bot_id]);
 $current_gapgpt_key = $stmt->fetchColumn() ?: '';
 
+$stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_model' AND bot_id = ?");
+$stmt->execute([$bot_id]);
+$current_gapgpt_model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
+
 $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text' AND bot_id = ?");
 $stmt->execute([$bot_id]);
 $current_event_selection_text = $stmt->fetchColumn() ?: '';
+
 
 // Determine what URL should be auto-filled
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
@@ -109,11 +132,24 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
         </div>
         <div class="p-5">
             <form method="POST">
-                <div class="mb-5">
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-[#475569] mb-2">کلید دسترسی (API Key)</label>
                     <input type="text" name="gapgpt_api_key" value="<?= htmlspecialchars($current_gapgpt_key) ?>" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 text-left font-mono" dir="ltr" placeholder="sk-...">
                 </div>
-                <button type="submit" name="save_gapgpt" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره</button>
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-[#475569] mb-2">مدل هوش مصنوعی</label>
+                    <select name="gapgpt_model" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500">
+                        <option value="gemini-2.5-flash" <?= $current_gapgpt_model == 'gemini-2.5-flash' ? 'selected' : '' ?>>Gemini 2.5 Flash (جدید)</option>
+                        <option value="gemini-2.5-flash-lite" <?= $current_gapgpt_model == 'gemini-2.5-flash-lite' ? 'selected' : '' ?>>Gemini 2.5 Flash Lite</option>
+                        <option value="gemini-2.0-flash-lite" <?= $current_gapgpt_model == 'gemini-2.0-flash-lite' ? 'selected' : '' ?>>Gemini 2.0 Flash Lite</option>
+                        <option value="gpt-4o-mini" <?= $current_gapgpt_model == 'gpt-4o-mini' ? 'selected' : '' ?>>GPT-4o Mini</option>
+                        <option value="gpt-4o" <?= $current_gapgpt_model == 'gpt-4o' ? 'selected' : '' ?>>GPT-4o</option>
+                    </select>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" name="save_gapgpt" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره</button>
+                    <button type="submit" name="test_gapgpt" class="bg-white hover:bg-gray-50 border border-[#e2e8f0] text-gray-700 font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">تست اتصال 🔌</button>
+                </div>
             </form>
         </div>
     </div>

@@ -32,6 +32,7 @@ class BotManager {
         try { $this->db->exec("ALTER TABLE `broadcasts` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `media_files` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `system_logs` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `bot_users` ADD `verified_channels` TEXT NULL"); } catch(PDOException $e) {}
 
         // Fix constraints for multi-bot
         try {
@@ -154,6 +155,7 @@ require_once realpath(__DIR__ . '/../../webhook.php');
             // Default settings for the new bot
             $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'webhook_url', '')")->execute([$id]);
             $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_api_key', '')")->execute([$id]);
+            $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_model', 'gemini-2.5-flash-lite')")->execute([$id]);
             $this->db->prepare("INSERT IGNORE INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'event_selection_text', '')")->execute([$id]);
         }
         return $id;

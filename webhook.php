@@ -35,6 +35,8 @@ if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
     exit("Forbidden");
 }
 
+require_once __DIR__ . '/classes/GapGPT.php';
+
 $input = file_get_contents('php://input');
 if (trim($input)) {
     Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', json_decode($input, true) ?: ['raw' => $input], $bot_id);
@@ -225,6 +227,17 @@ function handleCallbackQuery($cq) {
                         $is_member = in_array($status, ['member', 'creator', 'administrator']);
                         
                         if ($is_member) {
+                            // Save verification status
+                            global $db;
+                            $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
+                            $stmt->execute([$chat_id, $bot_id]);
+                            $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
+                            if (!in_array($channel, $verified)) {
+                                $verified[] = $channel;
+                                $stmt = $db->prepare("UPDATE bot_users SET verified_channels = ? WHERE chat_id = ? AND bot_id = ?");
+                                $stmt->execute([json_encode($verified, JSON_UNESCAPED_UNICODE), $chat_id, $bot_id]);
+                            }
+
                             $bot->answerCallbackQuery($cq['id'], "عضویت تایید شد ✅");
                             $mockMsg = [
                                 'text' => 'عضویت تایید شد',
@@ -359,6 +372,35 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
     }
 
     $field = $fields[$step_index];
+    
+    // Persistent Channel Verification Check
+    if ($field['type'] === 'channel_membership') {
+        $channel = json_decode($field['options_json'], true)[0] ?? '';
+        if ($channel) {
+            global $db;
+            $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
+            $stmt->execute([$chat_id, $bot_id]);
+            $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
+            if (in_array($channel, $verified)) {
+                // Already verified once, skip this step
+                $answers[$field['field_key']] = 'Verified (Cached)';
+                $next_index = $step_index + 1;
+                global $regManager;
+                $regManager->setState($chat_id, $event_id, $next_index, json_encode($answers, JSON_UNESCAPED_UNICODE), 'registering', $bot_id);
+                // Call askStep for the next field
+                // Use a mock processRegistrationStep logic or just call askStep
+                if ($next_index < count($fields)) {
+                    askStep($chat_id, $event_id, $next_index, $answers);
+                } else {
+                    // It was the last step
+                    $reg_data = ['text' => 'Verified (Cached)', 'is_checked_join' => true];
+                    processRegistrationStep($chat_id, $reg_data, $event_id, $step_index, $answers);
+                }
+                return;
+            }
+        }
+    }
+
     $prompt = $field['help_text'] ?: "لطفا {$field['label']} را وارد کنید:";
     $prompt = replacePlaceholders($prompt, $answers);
     
@@ -489,6 +531,11 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
             $apiKey = $stmt->fetchColumn();
             
             if ($apiKey) {
+                // Get model setting
+                $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_model' AND bot_id = ?");
+                $stmt->execute([$bot_id]);
+                $model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
+
                 $waitMsg = !empty(trim($event['ai_wait_message'])) ? $event['ai_wait_message'] : "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳";
                 $waitMsg = replacePlaceholders($waitMsg, $answers);
 
@@ -503,12 +550,16 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
                 
                 $fullPrompt = $aiPrompt . "\n\nاطلاعات کاربر:\n" . $userDataStr;
                 
-                $aiResponse = callGapGPT($fullPrompt, $apiKey);
+                // Initial response message for streaming
+                $sentMsg = $bot->sendMessage($chat_id, "🧠 در حال تفکر...");
+                $msg_id = $sentMsg['result']['message_id'] ?? null;
+
+                $aiResponse = GapGPT::call($fullPrompt, $apiKey, $model, $bot, $chat_id, $msg_id);
                 
-                if ($aiResponse) {
-                    $bot->sendMessage($chat_id, $aiResponse, ['remove_keyboard' => true]);
-                } else {
+                if (!$aiResponse && !$msg_id) {
                     $bot->sendMessage($chat_id, "متاسفانه در ارتباط با هوش مصنوعی خطایی رخ داد.", ['remove_keyboard' => true]);
+                } elseif ($aiResponse && !$msg_id) {
+                     $bot->sendMessage($chat_id, $aiResponse, ['remove_keyboard' => true]);
                 }
             } else {
                 $doneMsg = "ثبت‌نام شما با موفقیت انجام شد. (خطا: کلید API سرویس هوش مصنوعی تنظیم نشده است.)";
@@ -527,32 +578,6 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
     }
 }
 
-function callGapGPT($prompt, $apiKey) {
-    $ch = curl_init('https://api.gapgpt.app/v1/chat/completions');
-    $payload = json_encode([
-        "model" => "gapgpt-qwen-3.6",
-        "messages" => [
-            ["role" => "user", "content" => $prompt]
-        ]
-    ]);
-    
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer " . $apiKey,
-        "Content-Type: application/json"
-    ]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    
-    $response = curl_exec($ch);
-    if (curl_errno($ch)) {
-        return false;
-    }
-    curl_close($ch);
-    
-    $decoded = json_decode($response, true);
-    return $decoded['choices'][0]['message']['content'] ?? false;
-}
 
 function triggerCompletionAction($event, $answers, $chat_id) {
     if (!isset($event['action_type']) || $event['action_type'] === 'none') {

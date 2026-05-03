@@ -59,6 +59,16 @@ class BaleBot {
         return $this->request('sendMessage', $data);
     }
 
+    public function editMessageText($chat_id, $message_id, $text, $reply_markup = null) {
+        $data = [
+            'chat_id' => (string)$chat_id,
+            'message_id' => $message_id,
+            'text' => $text
+        ];
+        if ($reply_markup) $data['reply_markup'] = $reply_markup;
+        return $this->request('editMessageText', $data);
+    }
+
     public function sendPhoto($chat_id, $photo, $caption = null, $reply_markup = null) {
         $data = ['chat_id' => (string)$chat_id, 'photo' => $photo];
         if ($caption !== null) $data['caption'] = $caption;
