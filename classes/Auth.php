@@ -13,15 +13,15 @@ class Auth {
     }
 
     public function register($username, $password, $email = '') {
-        $stmt = $this->db->prepare("SELECT id FROM admins WHERE username = ?");
-        $stmt->execute([$username]);
+        $stmt = $this->db->prepare("SELECT id FROM admins WHERE username = ? OR (email = ? AND email != '')");
+        $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
-            return ['success' => false, 'message' => 'نام کاربری قبلاً انتخاب شده است.'];
+            return ['success' => false, 'message' => 'نام کاربری یا ایمیل قبلاً انتخاب شده است.'];
         }
 
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->db->prepare("INSERT INTO admins (username, password_hash) VALUES (?, ?)");
-        if ($stmt->execute([$username, $password_hash])) {
+        $stmt = $this->db->prepare("INSERT INTO admins (username, password_hash, email) VALUES (?, ?, ?)");
+        if ($stmt->execute([$username, $password_hash, $email])) {
             return ['success' => true, 'message' => 'ثبت‌نام با موفقیت انجام شد.'];
         }
         return ['success' => false, 'message' => 'خطایی در ثبت‌نام رخ داد.'];
