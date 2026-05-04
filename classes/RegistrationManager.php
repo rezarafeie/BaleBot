@@ -203,7 +203,20 @@ class RegistrationManager {
         return $stmt->fetchAll();
     }
     
-    public function deleteRegistration($id) {
+    public function deleteRegistration($id, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $sql = "SELECT id FROM registrations WHERE id = ?";
+        $params = [$id];
+        if ($bot_id) {
+            $sql .= " AND bot_id = ?";
+            $params[] = $bot_id;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        if (!$stmt->fetch()) return false;
+
         $this->db->prepare("DELETE FROM registration_answers WHERE registration_id = ?")->execute([$id]);
         return $this->db->prepare("DELETE FROM registrations WHERE id = ?")->execute([$id]);
     }

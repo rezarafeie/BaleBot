@@ -15,13 +15,33 @@ $botManager = new BotManager();
 $bots = $botManager->getBots();
 
 if (isset($_GET['switch_bot'])) {
-    $_SESSION['selected_bot_id'] = (int)$_GET['switch_bot'];
+    $sw_id = (int)$_GET['switch_bot'];
+    foreach ($bots as $b) {
+        if ($b['id'] == $sw_id) {
+            $_SESSION['selected_bot_id'] = $sw_id;
+            break;
+        }
+    }
     header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
     exit;
 }
 
 if (!isset($_SESSION['selected_bot_id']) && !empty($bots)) {
     $_SESSION['selected_bot_id'] = $bots[0]['id'];
+}
+
+// Re-validate session bot_id if bots list changed or session was hijacked
+if (isset($_SESSION['selected_bot_id'])) {
+    $found = false;
+    foreach ($bots as $b) {
+        if ($b['id'] == $_SESSION['selected_bot_id']) {
+            $found = true;
+            break;
+        }
+    }
+    if (!$found && !empty($bots)) {
+        $_SESSION['selected_bot_id'] = $bots[0]['id'];
+    }
 }
 
 $currentBot = null;

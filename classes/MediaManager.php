@@ -15,6 +15,7 @@ class MediaManager {
         
         $this->db->exec("CREATE TABLE IF NOT EXISTS `media_files` (
           `id` int(11) NOT NULL AUTO_INCREMENT,
+          `bot_id` int(11) DEFAULT 1,
           `file_path` varchar(255) NOT NULL,
           `file_type` varchar(50) NOT NULL,
           `file_size` int(11) NOT NULL,
@@ -23,6 +24,7 @@ class MediaManager {
           `created_at` datetime NOT NULL,
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        try { $this->db->exec("ALTER TABLE `media_files` ADD `bot_id` int(11) DEFAULT 1 AFTER `id` "); } catch(PDOException $e) {}
     }
 
     public function getAllMedia($bot_id = null) {
@@ -67,16 +69,29 @@ class MediaManager {
         throw new Exception("Upload failed.");
     }
     
-    public function deleteMedia($id) {
-        $stmt = $this->db->prepare("SELECT file_path FROM media_files WHERE id = ?");
-        $stmt->execute([$id]);
+    public function deleteMedia($id, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $sql = "SELECT file_path FROM media_files WHERE id = ?";
+        $params = [$id];
+        if ($bot_id) {
+            $sql .= " AND bot_id = ?";
+            $params[] = $bot_id;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $media = $stmt->fetch();
         if ($media) {
             $fullPath = dirname(__DIR__) . $media['file_path'];
             if (file_exists($fullPath)) {
-                unlink($fullPath);
+                @unlink($fullPath);
             }
-            $this->db->prepare("DELETE FROM media_files WHERE id = ?")->execute([$id]);
+            $sql2 = "DELETE FROM media_files WHERE id = ?";
+            if ($bot_id) {
+                $sql2 .= " AND bot_id = ?";
+            }
+            $this->db->prepare($sql2)->execute($params);
         }
     }
 }

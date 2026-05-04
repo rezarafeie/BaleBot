@@ -26,6 +26,7 @@ class BotManager {
         // Add platform-specific tokens to bots table
         try { $this->db->exec("ALTER TABLE `bots` ADD `telegram_token` varchar(255) DEFAULT NULL"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `bots` ADD `rubika_token` varchar(255) DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `bots` ADD `owner_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         
         // Add platform column to various tables
         try { $this->db->exec("ALTER TABLE `events` ADD `platforms` text DEFAULT NULL"); } catch(PDOException $e) {}
@@ -103,14 +104,31 @@ class BotManager {
         }
     }
 
-    public function getBots() {
+    public function getBots($owner_id = null) {
+        if ($owner_id === null && isset($_SESSION['admin_id'])) {
+            $owner_id = $_SESSION['admin_id'];
+        }
+        if ($owner_id) {
+            $stmt = $this->db->prepare("SELECT * FROM bots WHERE owner_id = ? ORDER BY id ASC");
+            $stmt->execute([$owner_id]);
+            return $stmt->fetchAll();
+        }
         $stmt = $this->db->query("SELECT * FROM bots ORDER BY id ASC");
         return $stmt->fetchAll();
     }
 
-    public function getBot($id) {
-        $stmt = $this->db->prepare("SELECT * FROM bots WHERE id = ?");
-        $stmt->execute([$id]);
+    public function getBot($id, $owner_id = null) {
+        if ($owner_id === null && isset($_SESSION['admin_id'])) {
+            $owner_id = $_SESSION['admin_id'];
+        }
+        $query = "SELECT * FROM bots WHERE id = ?";
+        $params = [$id];
+        if ($owner_id) {
+            $query .= " AND owner_id = ?";
+            $params[] = $owner_id;
+        }
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
 
@@ -166,9 +184,12 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         }
     }
 
-    public function createBot($name, $username, $token, $telegram_token = null, $rubika_token = null) {
-        $stmt = $this->db->prepare("INSERT INTO bots (name, username, token, telegram_token, rubika_token) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token]);
+    public function createBot($name, $username, $token, $telegram_token = null, $rubika_token = null, $owner_id = null) {
+        if ($owner_id === null && isset($_SESSION['admin_id'])) {
+            $owner_id = $_SESSION['admin_id'];
+        }
+        $stmt = $this->db->prepare("INSERT INTO bots (name, username, token, telegram_token, rubika_token, owner_id) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token, $owner_id]);
         $id = $this->db->lastInsertId();
         if ($id) {
             $this->ensureWebhookFile($username);
@@ -181,17 +202,35 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         return $id;
     }
 
-    public function updateBot($id, $name, $username, $token, $telegram_token, $rubika_token, $is_active) {
-        $stmt = $this->db->prepare("UPDATE bots SET name = ?, username = ?, token = ?, telegram_token = ?, rubika_token = ?, is_active = ? WHERE id = ?");
-        $res = $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token, $is_active ? 1 : 0, $id]);
+    public function updateBot($id, $name, $username, $token, $telegram_token, $rubika_token, $is_active, $owner_id = null) {
+        if ($owner_id === null && isset($_SESSION['admin_id'])) {
+            $owner_id = $_SESSION['admin_id'];
+        }
+        $query = "UPDATE bots SET name = ?, username = ?, token = ?, telegram_token = ?, rubika_token = ?, is_active = ? WHERE id = ?";
+        $params = [$name, $username, $token, $telegram_token, $rubika_token, $is_active ? 1 : 0, $id];
+        if ($owner_id) {
+            $query .= " AND owner_id = ?";
+            $params[] = $owner_id;
+        }
+        $stmt = $this->db->prepare($query);
+        $res = $stmt->execute($params);
         if ($res) {
             $this->ensureWebhookFile($username);
         }
         return $res;
     }
 
-    public function deleteBot($id) {
-        $stmt = $this->db->prepare("DELETE FROM bots WHERE id = ?");
-        return $stmt->execute([$id]);
+    public function deleteBot($id, $owner_id = null) {
+        if ($owner_id === null && isset($_SESSION['admin_id'])) {
+            $owner_id = $_SESSION['admin_id'];
+        }
+        $query = "DELETE FROM bots WHERE id = ?";
+        $params = [$id];
+        if ($owner_id) {
+            $query .= " AND owner_id = ?";
+            $params[] = $owner_id;
+        }
+        $stmt = $this->db->prepare($query);
+        return $stmt->execute($params);
     }
 }

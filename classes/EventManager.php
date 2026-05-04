@@ -91,9 +91,18 @@ class EventManager {
         return $stmt->fetchAll();
     }
 
-    public function getEvent($id) {
-        $stmt = $this->db->prepare("SELECT * FROM events WHERE id = ?");
-        $stmt->execute([$id]);
+    public function getEvent($id, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $sql = "SELECT * FROM events WHERE id = ?";
+        $params = [$id];
+        if ($bot_id) {
+            $sql .= " AND bot_id = ?";
+            $params[] = $bot_id;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
 
@@ -127,9 +136,12 @@ class EventManager {
         return $id;
     }
 
-    public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=? WHERE id=?");
-        $res = $stmt->execute([
+    public function updateEvent($id, $data, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $sql = "UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=? WHERE id=?";
+        $params = [
             $data['title'],
             $data['slug'],
             $data['description'],
@@ -150,19 +162,39 @@ class EventManager {
             $data['action_http_url'] ?? '',
             isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]',
             $id
-        ]);
-        $event = $this->getEvent($id);
+        ];
+
+        if ($bot_id) {
+            $sql .= " AND bot_id = ?";
+            $params[] = $bot_id;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $res = $stmt->execute($params);
+        $event = $this->getEvent($id, $bot_id);
         if ($event) {
             $this->syncCache($event['bot_id']);
         }
         return $res;
     }
 
-    public function deleteEvent($id) {
-        $event = $this->getEvent($id);
-        $stmt = $this->db->prepare("DELETE FROM events WHERE id = ?");
-        $res = $stmt->execute([$id]);
-        if ($event) {
+    public function deleteEvent($id, $bot_id = null) {
+        if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
+            $bot_id = $_SESSION['selected_bot_id'];
+        }
+        $event = $this->getEvent($id, $bot_id);
+        if (!$event) return false;
+
+        $sql = "DELETE FROM events WHERE id = ?";
+        $params = [$id];
+        if ($bot_id) {
+            $sql .= " AND bot_id = ?";
+            $params[] = $bot_id;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $res = $stmt->execute($params);
+        if ($res) {
             $this->syncCache($event['bot_id']);
         }
         return $res;
