@@ -37,8 +37,11 @@ if (file_exists('config.php')) {
             </div>
         </div>
 
-        <div class="mt-8 text-center">
-            <a href="admin/login.php" class="inline-block bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2.5 px-8 rounded-lg text-[13px] transition-colors">
+        <div class="mt-8 flex flex-col gap-3">
+            <a href="db-setup.php" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl text-sm transition-all shadow-lg shadow-blue-200">
+                شروع راه‌اندازی خودکار
+            </a>
+            <a href="admin/login.php" class="inline-block bg-white border border-slate-200 text-slate-600 font-bold py-3 px-8 rounded-xl text-sm transition-all hover:bg-slate-50">
                 ورود به پنل مدیریت
             </a>
         </div>

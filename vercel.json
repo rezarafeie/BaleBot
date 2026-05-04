@@ -27,7 +27,7 @@
             "dest": "/webhook.php"
         },
         {
-            "src": "/(install|register|webhook).php",
+            "src": "/(install|register|webhook|db-setup).php",
             "dest": "/$1.php"
         },
         {
