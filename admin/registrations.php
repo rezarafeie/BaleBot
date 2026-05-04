@@ -4,9 +4,6 @@ require_once dirname(__DIR__) . '/classes/Auth.php';
 require_once dirname(__DIR__) . '/classes/RegistrationManager.php';
 require_once dirname(__DIR__) . '/classes/EventManager.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 $auth = new Auth();
 $auth->requireLogin();
 

@@ -62,6 +62,14 @@ class EventManager {
     }
 
     public function getAllEvents($activeOnly = false, $bot_id = null) {
+        if (!$this->db) {
+            $cache = $this->getCachedData($bot_id);
+            if ($activeOnly) {
+                return array_filter($cache, function($e) { return is_array($e) && isset($e['is_active']) && $e['is_active'] == 1; });
+            }
+            // filter out slug mappings if they are numeric IDs
+            return array_filter($cache, function($v, $k) { return is_numeric($k); }, ARRAY_FILTER_USE_BOTH);
+        }
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
@@ -95,6 +103,10 @@ class EventManager {
     }
 
     public function getEvent($id, $bot_id = null) {
+        if (!$this->db) {
+            $cache = $this->getCachedData($bot_id);
+            return $cache[$id] ?? null;
+        }
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
@@ -205,6 +217,19 @@ class EventManager {
 
     // --- Fields ---
     public function getEventFields($event_id, $activeOnly = false) {
+        if (!$this->db) {
+            // Get from cache if possible (cached data includes fields)
+            $bot_id = $_SESSION['selected_bot_id'] ?? null;
+            $cache = $this->getCachedData($bot_id);
+            if (isset($cache[$event_id]['fields'])) {
+                $fields = $cache[$event_id]['fields'];
+                if ($activeOnly) {
+                    return array_filter($fields, function($f) { return $f['is_active'] == 1; });
+                }
+                return $fields;
+            }
+            return [];
+        }
         if ($activeOnly) {
             $stmt = $this->db->prepare("SELECT * FROM event_fields WHERE event_id = ? AND is_active = 1 ORDER BY sort_order ASC");
         } else {

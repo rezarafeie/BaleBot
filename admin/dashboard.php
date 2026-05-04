@@ -2,29 +2,49 @@
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/Database.php';
 
-$db = Database::getInstance()->getConnection();
+$dbInstance = Database::getInstance();
+$db = $dbInstance->getConnection();
 $bot_id = $_SESSION['selected_bot_id'] ?? 1;
 
-$total_users = $db->prepare("SELECT COUNT(*) FROM bot_users WHERE bot_id = ?");
-$total_users->execute([$bot_id]);
-$total_users = $total_users->fetchColumn();
+$total_users = 0; $total_events = 0; $total_regs = 0; $today_regs = 0; $recent = [];
 
-$total_events = $db->prepare("SELECT COUNT(*) FROM events WHERE bot_id = ?");
-$total_events->execute([$bot_id]);
-$total_events = $total_events->fetchColumn();
+if ($db) {
+    try {
+        $total_users = $db->prepare("SELECT COUNT(*) FROM bot_users WHERE bot_id = ?");
+        $total_users->execute([$bot_id]);
+        $total_users = $total_users->fetchColumn();
 
-$total_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE bot_id = ?");
-$total_regs->execute([$bot_id]);
-$total_regs = $total_regs->fetchColumn();
+        $total_events = $db->prepare("SELECT COUNT(*) FROM events WHERE bot_id = ?");
+        $total_events->execute([$bot_id]);
+        $total_events = $total_events->fetchColumn();
 
-$today_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE DATE(created_at) = CURDATE() AND bot_id = ?");
-$today_regs->execute([$bot_id]);
-$today_regs = $today_regs->fetchColumn();
+        $total_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE bot_id = ?");
+        $total_regs->execute([$bot_id]);
+        $total_regs = $total_regs->fetchColumn();
 
-$stmt = $db->prepare("SELECT r.*, e.title as event_title, u.name as user_name FROM registrations r JOIN events e ON r.event_id = e.id LEFT JOIN bot_users u ON r.chat_id = u.chat_id AND r.bot_id = u.bot_id WHERE r.bot_id = ? ORDER BY r.id DESC LIMIT 5");
-$stmt->execute([$bot_id]);
-$recent = $stmt->fetchAll();
-?>
+        $today_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE DATE(created_at) = CURDATE() AND bot_id = ?");
+        $today_regs->execute([$bot_id]);
+        $today_regs = $today_regs->fetchColumn();
+
+        $stmt = $db->prepare("SELECT r.*, e.title as event_title, u.name as user_name FROM registrations r JOIN events e ON r.event_id = e.id LEFT JOIN bot_users u ON r.chat_id = u.chat_id AND r.bot_id = u.bot_id WHERE r.bot_id = ? ORDER BY r.id DESC LIMIT 5");
+        $stmt->execute([$bot_id]);
+        $recent = $stmt->fetchAll();
+    } catch (Exception $e) { $db = null; }
+}
+
+if (!$db): ?>
+<div class="bg-red-50 border-r-4 border-red-500 p-4 mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <?= render_icon('exclamation-triangle', 'text-red-500') ?>
+        </div>
+        <div class="mr-3">
+            <p class="text-sm text-red-700 font-bold">پایگاه داده متصل نیست!</p>
+            <p class="text-xs text-red-600 mt-1">اطلاعات نمایش داده شده ممکن است ناقص باشد یا بارگذاری نشود. لطفاً تنظیمات پایگاه داده را بررسی کنید.</p>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">

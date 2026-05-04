@@ -107,6 +107,9 @@ class BotManager {
     }
 
     public function getBots($owner_id = null) {
+        if (!$this->db) {
+            return $this->getCachedBots();
+        }
         if ($owner_id === null && isset($_SESSION['admin_id'])) {
             $owner_id = $_SESSION['admin_id'];
         }
@@ -116,10 +119,46 @@ class BotManager {
             return $stmt->fetchAll();
         }
         $stmt = $this->db->query("SELECT * FROM bots ORDER BY id ASC");
-        return $stmt->fetchAll();
+        $res = $stmt->fetchAll();
+        $this->syncCache();
+        return $res;
+    }
+
+    private function syncCache() {
+        if (!$this->db) return;
+        $bots = $this->db->query("SELECT * FROM bots")->fetchAll();
+        $cache = [];
+        foreach ($bots as $bot) {
+            $cache[$bot['id']] = $bot;
+            $cache['user_' . ltrim($bot['username'], '@')] = $bot;
+        }
+        $cachePath = dirname(__DIR__) . '/data/bots_cache.json';
+        if (!is_dir(dirname($cachePath))) @mkdir(dirname($cachePath), 0777, true);
+        file_put_contents($cachePath, json_encode($cache, JSON_UNESCAPED_UNICODE));
+    }
+
+    private function getCachedBots() {
+        $cachePath = dirname(__DIR__) . '/data/bots_cache.json';
+        if (file_exists($cachePath)) {
+            $data = json_decode(file_get_contents($cachePath), true) ?: [];
+            // Convert indexed by ID to simple list for getBots
+            $list = [];
+            foreach ($data as $k => $v) {
+                if (is_numeric($k)) $list[] = $v;
+            }
+            return $list;
+        }
+        return [];
     }
 
     public function getBot($id, $owner_id = null) {
+        if (!$this->db) {
+            $cache = $this->getCachedBots();
+            foreach ($cache as $b) {
+                if ($b['id'] == $id) return $b;
+            }
+            return null;
+        }
         if ($owner_id === null && isset($_SESSION['admin_id'])) {
             $owner_id = $_SESSION['admin_id'];
         }
@@ -136,6 +175,14 @@ class BotManager {
 
     public function getBotByUsername($username) {
         $username = ltrim($username, '@');
+        if (!$this->db) {
+            $cachePath = dirname(__DIR__) . '/data/bots_cache.json';
+            if (file_exists($cachePath)) {
+                $cache = json_decode(file_get_contents($cachePath), true);
+                if (isset($cache['user_' . $username])) return $cache['user_' . $username];
+            }
+            return null;
+        }
         $stmt = $this->db->prepare("SELECT * FROM bots WHERE username = ?");
         $stmt->execute([$username]);
         $bot = $stmt->fetch();

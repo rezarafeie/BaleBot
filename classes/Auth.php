@@ -16,6 +16,9 @@ class Auth {
     }
 
     public function register($username, $password, $email = '') {
+        if (!$this->db) {
+            return ['success' => false, 'message' => 'پایگاه داده در دسترس نیست. امکان ثبت‌نام وجود ندارد.'];
+        }
         $stmt = $this->db->prepare("SELECT id FROM admins WHERE username = ? OR (email = ? AND email != '')");
         $stmt->execute([$username, $email]);
         if ($stmt->fetch()) {
@@ -62,7 +65,7 @@ class Auth {
     }
 
     public function updatePassword($new_password) {
-        if (!$this->isLoggedIn()) return false;
+        if (!$this->isLoggedIn() || !$this->db) return false;
         $hash = password_hash($new_password, PASSWORD_DEFAULT);
         $stmt = $this->db->prepare("UPDATE admins SET password_hash = ? WHERE id = ?");
         return $stmt->execute([$hash, $_SESSION['admin_id']]);

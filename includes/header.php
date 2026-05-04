@@ -1,8 +1,8 @@
 <?php
-ob_start();
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+ob_start();
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/classes/Auth.php';
 require_once dirname(__DIR__) . '/classes/BotManager.php';

@@ -1,8 +1,8 @@
 <?php
-session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/Auth.php';
 
+$dbConnected = Database::getInstance()->isConnected();
 $auth = new Auth();
 if ($auth->isLoggedIn()) {
     header("Location: admin/dashboard.php");
@@ -70,6 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
              <h1 style="margin: 0; font-size: 24px; font-weight: 900; margin-right: 12px;">ساخت حساب کاربری</h1>
         </div>
 
+        <?php if (!$dbConnected): ?>
+            <div class="alert alert-error">پایگاه داده در دسترس نیست. لطفاً تنظیمات پایگاه داده را در config.php بررسی کنید.</div>
+        <?php endif; ?>
+
         <?php if ($error): ?>
             <div class="alert alert-error"><?= $error ?></div>
         <?php endif; ?>
@@ -98,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                     <input type="password" name="confirm_password" class="input" required>
                 </div>
 
-                <button type="submit" name="register" class="btn btn-primary">ثبت‌نام و ایجاد حساب</button>
+                <button type="submit" name="register" class="btn btn-primary" <?= !$dbConnected ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>ثبت‌نام و ایجاد حساب</button>
             </form>
         <?php endif; ?>
 
