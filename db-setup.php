@@ -17,6 +17,7 @@ $error = '';
 // Load current config if exists
 $currentConfig = [
     'host' => 'localhost',
+    'port' => '3306',
     'db' => 'botman_db',
     'user' => 'root',
     'pass' => ''
@@ -25,6 +26,7 @@ $currentConfig = [
 if (file_exists($configFile)) {
     $content = file_get_contents($configFile);
     if (preg_match("/define\('DB_HOST', '(.*?)'\);/", $content, $m)) $currentConfig['host'] = $m[1];
+    if (preg_match("/define\('DB_PORT', '(.*?)'\);/", $content, $m)) $currentConfig['port'] = $m[1];
     if (preg_match("/define\('DB_NAME', '(.*?)'\);/", $content, $m)) $currentConfig['db'] = $m[1];
     if (preg_match("/define\('DB_USER', '(.*?)'\);/", $content, $m)) $currentConfig['user'] = $m[1];
     if (preg_match("/define\('DB_PASS', '(.*?)'\);/", $content, $m)) $currentConfig['pass'] = $m[1];
@@ -34,19 +36,21 @@ if (file_exists($configFile)) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     $host = $_POST['host'] ?? '';
+    $port = $_POST['port'] ?? '3306';
     $user = $_POST['user'] ?? '';
     $pass = $_POST['pass'] ?? '';
     $dbName = $_POST['db_name'] ?? '';
 
     if ($action === 'test' || $action === 'save' || $action === 'migrate') {
         try {
-            $pdo = new PDO("mysql:host=$host;charset=utf8mb4", $user, $pass);
+            $dsn_base = "mysql:host=$host" . ($port ? ";port=$port" : "");
+            $pdo = new PDO("$dsn_base;charset=utf8mb4", $user, $pass);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             // Try to create DB if not exists
             $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $pdo->exec("USE `$dbName` text;"); // Just testing use
-            $pdo = new PDO("mysql:host=$host;dbname=$dbName;charset=utf8mb4", $user, $pass);
+            $pdo->exec("USE `$dbName`;"); 
+            $pdo = new PDO("$dsn_base;dbname=$dbName;charset=utf8mb4", $user, $pass);
             
             if ($action === 'test') {
                 $status = 'اتصال با موفقیت برقرار شد و دیتابیس در دسترس است.';
@@ -57,6 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (file_exists($configFile)) {
                     $content = file_get_contents($configFile);
                     $content = preg_replace("/define\('DB_HOST', '.*?'\);/", "define('DB_HOST', '$host');", $content);
+                    
+                    if (strpos($content, 'DB_PORT') !== false) {
+                        $content = preg_replace("/define\('DB_PORT', '.*?'\);/", "define('DB_PORT', '$port');", $content);
+                    } else {
+                        $content = str_replace("define('DB_HOST', '$host');", "define('DB_HOST', '$host');\ndefine('DB_PORT', '$port');", $content);
+                    }
+
                     $content = preg_replace("/define\('DB_NAME', '.*?'\);/", "define('DB_NAME', '$dbName');", $content);
                     $content = preg_replace("/define\('DB_USER', '.*?'\);/", "define('DB_USER', '$user');", $content);
                     $content = preg_replace("/define\('DB_PASS', '.*?'\);/", "define('DB_PASS', '$pass');", $content);
@@ -127,19 +138,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($error): ?>
                     <div class="bg-rose-50 text-rose-600 p-5 rounded-2xl mb-8 text-sm font-bold border border-rose-100 italic">
                         <?= $error ?>
+                        <?php if (strpos($error, 'timed out') !== false): ?>
+                            <div class="mt-2 text-xs font-normal text-rose-500 not-italic">
+                                راهنما: اگر با خطای Timeout مواجه شدید، اطمینان حاصل کنید که دیتابیس شما اجازه دسترسی از خارج (External Access) را دارد و آی‌پی‌های سرور در لیست سفید (Whitelist) قرار دارند.
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
                 <form method="POST" class="space-y-6">
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="md:col-span-2">
                             <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">میزبان (Host)</label>
                             <input type="text" name="host" value="<?= htmlspecialchars($_POST['host'] ?? $currentConfig['host']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
                         </div>
                         <div>
-                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">نام دیتابیس</label>
-                            <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
+                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">پورت (Port)</label>
+                            <input type="text" name="port" value="<?= htmlspecialchars($_POST['port'] ?? $currentConfig['port']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
                         </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">نام دیتابیس</label>
+                        <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-6">
