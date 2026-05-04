@@ -58,7 +58,7 @@ require_once __DIR__ . '/config.php';
                 </div>
                 <h1 class="text-6xl md:text-[5.5rem] font-black text-slate-900 mb-10 leading-[1.05] tracking-tight">
                     مدیریت ربات، <br />
-                    <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic">به سبکی نو.</span>
+                    <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic">به سبک من</span>
                 </h1>
                 <p class="text-xl md:text-2xl text-slate-400 mb-16 max-w-2xl mx-auto leading-relaxed font-medium">
                     پاسخگویی هوشمند، مدیریت متمرکز و پایداری واقعی در تمامی پیام‌رسان‌های بله، تلگرام و روبیکا.

@@ -47,7 +47,7 @@ export default function App() {
               </div>
               <h1 className="text-6xl md:text-[5.5rem] font-black text-slate-900 mb-10 leading-[1.05] tracking-tight">
                 مدیریت ربات، <br />
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic">به سبکی نو.</span>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic">به سبک من</span>
               </h1>
               <p className="text-xl md:text-2xl text-slate-400 mb-16 max-w-2xl mx-auto leading-relaxed font-medium">
                 پاسخگویی هوشمند، مدیریت متمرکز و پایداری واقعی در تمامی پیام‌رسان‌های بله، تلگرام و روبیکا.
