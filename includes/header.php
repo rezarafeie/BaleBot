@@ -64,6 +64,12 @@ function url($path = '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BotMan | پنل مدیریت هوشمند</title>
+    <style>
+        :root {
+            --font-persian: Tahoma, Arial, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+        }
+        body { font-family: var(--font-persian); }
+    </style>
     <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>

@@ -171,9 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .card { background: white; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.1); border: 1px solid #f1f5f9; overflow: hidden; padding: 40px; }
         .input-group { margin-bottom: 24px; }
         .label { display: block; color: #94a3b8; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-        .input { width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 1rem; px: 24px; py: 16px; font-size: 14px; outline: none; transition: all 0.2s; font-family: monospace; }
+        .input { width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 1rem; padding: 16px 24px; font-size: 14px; outline: none; transition: all 0.2s; font-family: monospace; }
         .input:focus { border-color: #2563eb; background: white; }
-        .btn { display: block; width: 100%; padding: 20px; border-radius: 1.5rem; font-weight: 700; cursor: pointer; transition: all 0.2s; appearance: none; border: none; text-align: center; text-decoration: none; }
+        .btn { display: block; width: 100%; padding: 20px; border-radius: 1.5rem; font-weight: 700; cursor: pointer; transition: all 0.2s; appearance: none; border: none; text-align: center; text-decoration: none; font-family: inherit; }
         .btn-primary { background: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
         .btn-secondary { background: #0f172a; color: white; }
         .btn-ghost { background: white; border: 1px solid #e2e8f0; color: #475569; }
@@ -182,15 +182,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .status-success { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
         .status-error { background: #fef2f2; color: #dc2626; border-color: #fee2e2; }
         .text-left { text-align: left; }
+        .arvan-tip { margin-top: 15px; padding: 15px; background: #fff7ed; border: 1px solid #ffedd5; border-radius: 1rem; color: #9a3412; font-size: 12px; font-weight: 500; }
     </style>
 </head>
 <body dir="rtl">
 
-    <div class="max-w-2xl w-full">
+    <div class="max-w-2xl w-full" style="max-width: 672px; margin: 0 auto;">
         <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden shadow-blue-100/50">
-            <div class="p-10 md:p-14">
-                <div class="flex items-center gap-4 mb-10">
-                    <div style="width: 48px; h: 48px; background: #2563eb; color: white; border-radius: 12px; display: flex; align-items: center; justify-center; font-weight: bold; font-size: 24px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.4);">B</div>
+            <div class="p-10 md:p-14" style="padding: 40px;">
+                <div class="flex items-center gap-4 mb-10" style="display: flex; align-items: center; gap: 16px; margin-bottom: 40px;">
+                    <div style="width: 48px; height: 48px; background: #2563eb; color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.4);">B</div>
                     <div style="margin-right: 15px;">
                         <h1 style="margin: 0; font-size: 24px; font-weight: 900;">تنظیمات پایگاه داده</h1>
                         <p style="margin: 0; color: #94a3b8; font-size: 14px;">پیکربندی اتصال MySQL و نصب جداول</p>
@@ -207,6 +208,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($error): ?>
                     <div class="status status-error" style="flex-direction: column; align-items: flex-start;">
                         <div><?= $error ?></div>
+                        
+                        <?php if (strpos($error, 'Connection timed out') !== false): ?>
+                            <div class="arvan-tip">
+                                <strong>⚠️ نکته مهم برای کاربران ابر آروان (ArvanCloud):</strong><br>
+                                علاوه بر Whitelist کردن آی‌پی، باید در پنل دیتابیس آروان گزینه <strong>«دسترسی عمومی (Public Data Access)»</strong> را فعال کنید. در غیر این صورت حتی با وایت‌لیست هم امکان اتصال وجود ندارد.
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 

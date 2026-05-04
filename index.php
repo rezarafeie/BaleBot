@@ -9,10 +9,13 @@ require_once __DIR__ . '/config.php';
     <title>BotMan | مدیریت هوشمند ربات‌ها</title>
     <style>
         :root {
-            --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+            --font-persian: Tahoma, Arial, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
             --primary: #2563eb;
+            --primary-dark: #1d4ed8;
             --slate-900: #0f172a;
             --slate-400: #94a3b8;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
         }
         body { 
             font-family: var(--font-persian); 
@@ -20,36 +23,83 @@ require_once __DIR__ . '/config.php';
             color: var(--slate-900);
             margin: 0;
             direction: rtl;
+            line-height: 1.5;
+        }
+        * { box-sizing: border-box; }
+        .max-w-6xl { max-width: 1152px; margin: 0 auto; }
+        .px-8 { padding-left: 32px; padding-right: 32px; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .gap-8 { gap: 32px; }
+        .fixed { position: fixed; }
+        .top-0 { top: 0; }
+        .w-full { width: 100%; }
+        .z-50 { z-index: 50; }
+        .bg-white { background-color: white; }
+        .backdrop-blur-xl { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+        .border-b { border-bottom: 1px solid var(--slate-100); }
+        .h-20 { height: 80px; }
+        .font-bold { font-weight: 700; }
+        .font-black { font-weight: 900; }
+        .text-xl { font-size: 20px; }
+        .text-sm { font-size: 14px; }
+        .text-slate-400 { color: var(--slate-400); }
+        .text-slate-900 { color: var(--slate-900); }
+        .bg-blue-600 { background-color: var(--primary); }
+        .text-white { color: white; }
+        .rounded-2xl { border-radius: 16px; }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        /* Hero */
+        .pt-48 { padding-top: 192px; }
+        .pb-32 { padding-bottom: 128px; }
+        .text-center { text-align: center; }
+        .text-6xl { font-size: 60px; }
+        .md-text-8xl { font-size: 88px; }
+        .mb-10 { margin-bottom: 40px; }
+        .mb-16 { margin-bottom: 64px; }
+        .leading-relaxed { line-height: 1.625; }
+        .max-w-2xl { max-width: 672px; margin-left: auto; margin-right: auto; }
+        .btn { display: inline-flex; align-items: center; gap: 12px; padding: 20px 48px; border-radius: 24px; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 20px 30px -10px rgba(37, 99, 235, 0.3); }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-4px); }
+        .btn-outline { border: 2px solid var(--slate-100); color: #475569; }
+        .btn-outline:hover { background: var(--slate-50); }
+        
+        .hero-gradient {
+            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
         }
         @keyframes float {
             0% { transform: translateY(0px) rotate(3deg); }
             50% { transform: translateY(-20px) rotate(5deg); }
             100% { transform: translateY(0px) rotate(3deg); }
         }
-        .hero-gradient {
-            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        
+        @media (max-width: 768px) {
+            .text-6xl { font-size: 40px; }
+            .flex-col-mobile { flex-direction: column; }
+            .w-full-mobile { width: 100%; }
         }
     </style>
 </head>
-<body class="bg-white text-slate-900 selection:bg-blue-600 selection:text-white">
+<body class="selection:bg-blue-600 selection:text-white">
 
     <!-- Navigation -->
-    <nav class="fixed top-0 w-full z-50 bg-white/50 backdrop-blur-xl border-b border-slate-50">
+    <nav class="fixed top-0 w-full z-50 bg-white backdrop-blur-xl border-b" style="background: rgba(255,255,255,0.8);">
         <div class="max-w-6xl mx-auto px-8 h-20 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white" style="width: 40px; height: 40px;">
+                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
-                <span class="font-bold text-xl tracking-tight text-slate-900">BotMan</span>
+                <span class="font-bold text-xl text-slate-900">BotMan</span>
             </div>
             <div class="flex items-center gap-8">
-                <nav class="hidden md:flex gap-10 text-sm font-semibold text-slate-500">
-                    <a href="#features" class="hover:text-blue-600 transition-colors">امکانات</a>
-                    <a href="#platforms" class="hover:text-blue-600 transition-colors">پلتفرم‌ها</a>
-                </nav>
                 <div class="flex items-center gap-4">
-                    <a href="admin/login.php" class="text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors">ورود</a>
-                    <a href="register.php" class="bg-blue-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
+                    <a href="admin/login.php" style="font-size: 14px; font-weight: 700; color: var(--slate-400); text-decoration: none; margin-left: 20px;">ورود</a>
+                    <a href="register.php" class="bg-blue-600 text-white" style="padding: 12px 24px; border-radius: 16px; font-size: 14px; font-weight: 700; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.3);">
                         شروع کنید
                     </a>
                 </div>
@@ -57,27 +107,27 @@ require_once __DIR__ . '/config.php';
         </div>
     </nav>
 
-    <main class="relative overflow-hidden hero-gradient">
+    <main class="hero-gradient" style="overflow: hidden; position: relative;">
         <!-- Hero Section -->
         <section class="pt-48 pb-32 px-8">
-            <div class="max-w-6xl mx-auto text-center">
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-10 border border-blue-100 shadow-sm">
-                    <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            <div class="max-w-6xl mx-auto text-center" style="max-width: 1152px;">
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 16px; background: #eff6ff; color: #2563eb; border-radius: 9999px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 40px; border: 1px solid #dbeafe;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb;"></span>
                     نسخه پیشرفته ۲.۵
                 </div>
-                <h1 class="text-6xl md:text-[5.5rem] font-black text-slate-900 mb-10 leading-[1.05] tracking-tight">
+                <h1 class="text-6xl font-black text-slate-900 mb-10" style="line-height: 1.1;">
                     مدیریت ربات، <br />
-                    <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic">به سبک من</span>
+                    <span style="background: linear-gradient(to right, #2563eb, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-style: italic;">به سبک من</span>
                 </h1>
-                <p class="text-xl md:text-2xl text-slate-400 mb-16 max-w-2xl mx-auto leading-relaxed font-medium">
+                <p class="max-w-2xl text-slate-400 mb-16" style="font-size: 20px; font-weight: 500; line-height: 1.6;">
                     پاسخگویی هوشمند، مدیریت متمرکز و پایداری واقعی در تمامی پیام‌رسان‌های بله، تلگرام و روبیکا.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                    <a href="register.php" class="w-full sm:w-auto px-12 py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg shadow-2xl shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300 hover:-translate-y-1 transition-all flex items-center justify-center gap-3">
+                <div class="flex flex-col-mobile gap-4" style="display: flex; justify-content: center; align-items: center; gap: 24px;">
+                    <a href="register.php" class="btn btn-primary w-full-mobile">
                         رایگان شروع کنید
-                        <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        <svg style="width: 20px; height: 20px; transform: rotate(180deg);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </a>
-                    <a href="admin/login.php" class="w-full sm:w-auto px-12 py-5 border-2 border-slate-100 text-slate-600 rounded-[1.5rem] font-bold text-lg hover:bg-slate-50 transition-all">
+                    <a href="admin/login.php" class="btn btn-outline w-full-mobile">
                         ورود به حساب
                     </a>
                 </div>
