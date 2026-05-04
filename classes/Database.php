@@ -2,9 +2,13 @@
 // classes/Database.php
 class Database {
     private static $instance = null;
-    private $conn;
+    private $conn = null;
+    private $isConnected = false;
+    private $connectionError = null;
 
     private function __construct() {
+        if (!defined('DB_HOST')) return; // Not configured yet
+        
         try {
             $dsn = "mysql:host=" . DB_HOST;
             if (defined('DB_PORT') && DB_PORT) {
@@ -12,23 +16,16 @@ class Database {
             }
             $dsn .= ";dbname=" . DB_NAME . ";charset=utf8mb4";
             
-            $this->conn = new PDO($dsn, DB_USER, DB_PASS);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $this->conn = new PDO($dsn, DB_USER, DB_PASS, [
+                PDO::ATTR_TIMEOUT => 3, // 3 seconds timeout
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            ]);
+            $this->isConnected = true;
         } catch(PDOException $e) {
-            $msg = "Database Connection failed: " . $e->getMessage() . "\n";
-            $msg .= "Attempted Connection Info:\n";
-            $msg .= "Host: " . DB_HOST . "\n";
-            if (defined('DB_PORT')) $msg .= "Port: " . DB_PORT . "\n";
-            $msg .= "DB: " . DB_NAME . "\n";
-            $msg .= "User: " . DB_USER . "\n";
-            
-            // diagnostic
-            $ip = gethostbyname(DB_HOST);
-            $msg .= "Host Resolution: " . ($ip === DB_HOST ? "Failed" : "Success ($ip)") . "\n";
-            
-            error_log($msg);
-            die(nl2br(htmlspecialchars($msg)));
+            $this->isConnected = false;
+            $this->connectionError = $e->getMessage();
+            error_log("Database Connection failed: " . $e->getMessage());
         }
     }
 
@@ -39,7 +36,15 @@ class Database {
         return self::$instance;
     }
 
+    public function isConnected() {
+        return $this->isConnected;
+    }
+
     public function getConnection() {
         return $this->conn;
+    }
+
+    public function getError() {
+        return $this->connectionError;
     }
 }

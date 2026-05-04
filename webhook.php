@@ -14,6 +14,12 @@ $bot_id = $bot_id ?? ($_GET['bot_id'] ?? null);
 $bot_user = $bot_user ?? ($_GET['bot_user'] ?? null);
 $requested_platform = $_GET['platform'] ?? 'bale';
 
+// Attempt to sync if connected
+if (Database::getInstance()->isConnected()) {
+    require_once __DIR__ . '/classes/SyncManager.php';
+    SyncManager::processQueue();
+}
+
 $botManager = new BotManager();
 
 if ($bot_id) {
@@ -63,7 +69,11 @@ if ($platform === 'telegram') {
 $eventManager = new EventManager();
 $regManager = new RegistrationManager();
 
-$db = Database::getInstance()->getConnection();
+$dbInstance = Database::getInstance();
+$db = $dbInstance->getConnection();
+
+// Determine if we are in "local only" mode
+$isOffline = !$dbInstance->isConnected();
 
 // Load event cache
 $eventCache = $eventManager->getCachedData($bot_id);
@@ -91,13 +101,17 @@ http_response_code(200);
 function sendMediaOrMessage($chat_id, $text, $media_id = null) {
     global $bot, $db;
     
-    if (!$media_id) {
+    if (!$media_id || !$db) {
         return $bot->sendMessage($chat_id, $text);
     }
     
-    $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
-    $stmt->execute([$media_id]);
-    $mediaFile = $stmt->fetch();
+    try {
+        $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
+        $stmt->execute([$media_id]);
+        $mediaFile = $stmt->fetch();
+    } catch (Exception $e) {
+        return $bot->sendMessage($chat_id, $text);
+    }
     
     if (!$mediaFile) {
         return $bot->sendMessage($chat_id, $text);
@@ -248,13 +262,17 @@ function handleCallbackQuery($cq) {
                         if ($is_member) {
                             // Save verification status
                             global $db;
-                            $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
-                            $stmt->execute([$chat_id, $bot_id]);
-                            $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
-                            if (!in_array($channel, $verified)) {
-                                $verified[] = $channel;
-                                $stmt = $db->prepare("UPDATE bot_users SET verified_channels = ? WHERE chat_id = ? AND bot_id = ?");
-                                $stmt->execute([json_encode($verified, JSON_UNESCAPED_UNICODE), $chat_id, $bot_id]);
+                            if ($db) {
+                                try {
+                                    $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
+                                    $stmt->execute([$chat_id, $bot_id]);
+                                    $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
+                                    if (!in_array($channel, $verified)) {
+                                        $verified[] = $channel;
+                                        $stmt = $db->prepare("UPDATE bot_users SET verified_channels = ? WHERE chat_id = ? AND bot_id = ?");
+                                        $stmt->execute([json_encode($verified, JSON_UNESCAPED_UNICODE), $chat_id, $bot_id]);
+                                    }
+                                } catch (Exception $e) {}
                             }
 
                             $bot->answerCallbackQuery($cq['id'], "عضویت تایید شد ✅");
@@ -282,11 +300,13 @@ function handleCallbackQuery($cq) {
 
 function sendMedia($chat_id, $media_id, $caption = '', $extra = []) {
     global $bot, $db;
-    if (!$media_id) return false;
+    if (!$media_id || !$db) return false;
 
-    $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
-    $stmt->execute([$media_id]);
-    $media = $stmt->fetch();
+    try {
+        $stmt = $db->prepare("SELECT * FROM media_files WHERE id = ?");
+        $stmt->execute([$media_id]);
+        $media = $stmt->fetch();
+    } catch (Exception $e) { return false; }
 
     if (!$media) return false;
 
@@ -327,9 +347,14 @@ function sendEventSelection($chat_id) {
     }
     
     global $db;
-    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text' AND bot_id = ?");
-    $stmt->execute([$bot_id]);
-    $setting_text = $stmt->fetchColumn();
+    $setting_text = "";
+    if ($db) {
+        try {
+            $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'event_selection_text' AND bot_id = ?");
+            $stmt->execute([$bot_id]);
+            $setting_text = $stmt->fetchColumn();
+        } catch (Exception $e) {}
+    }
     
     $message = $setting_text ?: "سلام 👋\nبه سامانه ثبتنام خوش آمدید.\nبرای شروع، لطفاً رویداد موردنظر خود را انتخاب کنید.";
     
@@ -397,9 +422,14 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
         $channel = json_decode($field['options_json'], true)[0] ?? '';
         if ($channel) {
             global $db;
-            $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
-            $stmt->execute([$chat_id, $bot_id]);
-            $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
+            $verified = [];
+            if ($db) {
+                try {
+                    $stmt = $db->prepare("SELECT verified_channels FROM bot_users WHERE chat_id = ? AND bot_id = ?");
+                    $stmt->execute([$chat_id, $bot_id]);
+                    $verified = json_decode($stmt->fetchColumn() ?: '[]', true) ?: [];
+                } catch (Exception $e) {}
+            }
             if (in_array($channel, $verified)) {
                 // Already verified once, skip this step
                 $answers[$field['field_key']] = 'Verified (Cached)';
@@ -550,15 +580,22 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         
         if ($event['use_ai']) {
             global $db;
-            $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key' AND bot_id = ?");
-            $stmt->execute([$bot_id]);
-            $apiKey = $stmt->fetchColumn();
+            $apiKey = "";
+            $model = 'gemini-2.5-flash-lite';
+            if ($db) {
+                try {
+                    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key' AND bot_id = ?");
+                    $stmt->execute([$bot_id]);
+                    $apiKey = $stmt->fetchColumn();
+                    
+                    // Get model setting
+                    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_model' AND bot_id = ?");
+                    $stmt->execute([$bot_id]);
+                    $model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
+                } catch (Exception $e) {}
+            }
             
             if ($apiKey) {
-                // Get model setting
-                $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_model' AND bot_id = ?");
-                $stmt->execute([$bot_id]);
-                $model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
 
                 $waitMsg = !empty(trim($event['ai_wait_message'])) ? $event['ai_wait_message'] : "درحال پردازش اطلاعات شما با هوش مصنوعی... ⏳";
                 $waitMsg = replacePlaceholders($waitMsg, $answers);
@@ -615,19 +652,23 @@ function triggerCompletionAction($event, $answers, $chat_id) {
     $answers['event_title'] = $event['title'] ?? '';
     
     // Fetch user info for more placeholders
-    $stmt = $db->prepare("SELECT * FROM bot_users WHERE chat_id = ?");
-    $stmt->execute([$chat_id]);
-    $user = $stmt->fetch();
-    if ($user) {
-        $answers['user_name'] = $user['name'] ?? '';
-        $answers['user_username'] = $user['username'] ?? '';
-        
-        // Try to guess first/last name if not explicitly in answers
-        if (!isset($answers['first_name']) && $user['name']) {
-            $parts = explode(' ', $user['name']);
-            $answers['first_name'] = $parts[0];
-            $answers['last_name'] = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
-        }
+    if ($db) {
+        try {
+            $stmt = $db->prepare("SELECT * FROM bot_users WHERE chat_id = ?");
+            $stmt->execute([$chat_id]);
+            $user = $stmt->fetch();
+            if ($user) {
+                $answers['user_name'] = $user['name'] ?? '';
+                $answers['user_username'] = $user['username'] ?? '';
+                
+                // Try to guess first/last name if not explicitly in answers
+                if (!isset($answers['first_name']) && isset($user['name'])) {
+                    $parts = explode(' ', $user['name']);
+                    $answers['first_name'] = $parts[0];
+                    $answers['last_name'] = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
+                }
+            }
+        } catch (Exception $e) {}
     }
     
     if ($event['action_type'] === 'webhook' && !empty($event['action_webhook_url'])) {

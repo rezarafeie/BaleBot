@@ -6,19 +6,22 @@ class EventManager {
     private $db;
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
-        
-        try { $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `action_type` VARCHAR(50) DEFAULT 'none'"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_url` TEXT NULL"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_body` TEXT NULL"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `events` ADD `action_http_url` TEXT NULL"); } catch(PDOException $e) {}
-        try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
+        $dbInstance = Database::getInstance();
+        if ($dbInstance->isConnected()) {
+            $this->db = $dbInstance->getConnection();
+            try { $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `action_type` VARCHAR(50) DEFAULT 'none'"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_url` TEXT NULL"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_body` TEXT NULL"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `events` ADD `action_http_url` TEXT NULL"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
+        }
     }
 
     public function syncCache($bot_id = null) {
+        if (!$this->db) return; // Cannot sync without DB
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }

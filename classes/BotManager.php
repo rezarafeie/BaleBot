@@ -6,9 +6,11 @@ class BotManager {
     private $db;
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
-        
-        $this->init();
+        $dbInstance = Database::getInstance();
+        if ($dbInstance->isConnected()) {
+            $this->db = $dbInstance->getConnection();
+            $this->init();
+        }
     }
 
     private function init() {

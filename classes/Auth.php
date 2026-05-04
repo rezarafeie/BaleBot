@@ -6,7 +6,10 @@ class Auth {
     private $db;
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+        $dbInstance = Database::getInstance();
+        if ($dbInstance->isConnected()) {
+            $this->db = $dbInstance->getConnection();
+        }
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -28,6 +31,7 @@ class Auth {
     }
 
     public function login($username, $password) {
+        if (!$this->db) return false;
         $stmt = $this->db->prepare("SELECT id, username, password_hash FROM admins WHERE username = ?");
         $stmt->execute([$username]);
         $admin = $stmt->fetch();
