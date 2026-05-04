@@ -35,42 +35,60 @@ if (file_exists($configFile)) {
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    $dbType = $_POST['db_type'] ?? 'mysql';
+    
+    // MySQL Params
     $host = $_POST['host'] ?? '';
     $port = $_POST['port'] ?? '3306';
     $user = $_POST['user'] ?? '';
     $pass = $_POST['pass'] ?? '';
     $dbName = $_POST['db_name'] ?? '';
 
+    // D1 Params
+    $cfAccountId = $_POST['cf_account_id'] ?? '';
+    $cfDatabaseId = $_POST['cf_database_id'] ?? '';
+    $cfApiToken = $_POST['cf_api_token'] ?? '';
+
     if ($action === 'test' || $action === 'save' || $action === 'migrate') {
         try {
-            $dsn_base = "mysql:host=$host" . ($port ? ";port=$port" : "");
-            $pdo = new PDO("$dsn_base;charset=utf8mb4", $user, $pass);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            // Try to create DB if not exists
-            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $pdo->exec("USE `$dbName`;"); 
-            $pdo = new PDO("$dsn_base;dbname=$dbName;charset=utf8mb4", $user, $pass);
+            if ($dbType === 'mysql') {
+                $dsn_base = "mysql:host=$host" . ($port ? ";port=$port" : "");
+                $pdo = new PDO("$dsn_base;charset=utf8mb4", $user, $pass);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                // Try to create DB if not exists
+                $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                $pdo->exec("USE `$dbName`;"); 
+                $pdo = new PDO("$dsn_base;dbname=$dbName;charset=utf8mb4", $user, $pass);
+                $conn = $pdo;
+            } else {
+                // Cloudflare D1
+                require_once __DIR__ . '/classes/CloudflareD1.php';
+                $conn = new CloudflareD1($cfAccountId, $cfDatabaseId, $cfApiToken);
+                if (!$conn->query("SELECT 1")) {
+                    throw new Exception($conn->getError() ?: "D1 Connection Failed");
+                }
+            }
             
             if ($action === 'test') {
-                $status = 'اتصال با موفقیت برقرار شد و دیتابیس در دسترس است.';
+                $status = 'اتصال با موفقیت برقرار شد.';
             }
 
             if ($action === 'save' || $action === 'migrate') {
                 // Update config.php content
                 if (file_exists($configFile)) {
                     $content = file_get_contents($configFile);
+                    $content = preg_replace("/define\('DB_TYPE', '.*?'\);/", "define('DB_TYPE', '$dbType');", $content);
                     $content = preg_replace("/define\('DB_HOST', '.*?'\);/", "define('DB_HOST', '$host');", $content);
-                    
-                    if (strpos($content, 'DB_PORT') !== false) {
-                        $content = preg_replace("/define\('DB_PORT', '.*?'\);/", "define('DB_PORT', '$port');", $content);
-                    } else {
-                        $content = str_replace("define('DB_HOST', '$host');", "define('DB_HOST', '$host');\ndefine('DB_PORT', '$port');", $content);
-                    }
-
+                    $content = preg_replace("/define\('DB_PORT', '.*?'\);/", "define('DB_PORT', '$port');", $content);
                     $content = preg_replace("/define\('DB_NAME', '.*?'\);/", "define('DB_NAME', '$dbName');", $content);
                     $content = preg_replace("/define\('DB_USER', '.*?'\);/", "define('DB_USER', '$user');", $content);
                     $content = preg_replace("/define\('DB_PASS', '.*?'\);/", "define('DB_PASS', '$pass');", $content);
+                    
+                    $content = preg_replace("/define\('CF_ACCOUNT_ID', '.*?'\);/", "define('CF_ACCOUNT_ID', '$cfAccountId');", $content);
+                    $content = preg_replace("/define\('CF_DATABASE_ID', '.*?'\);/", "define('CF_DATABASE_ID', '$cfDatabaseId');", $content);
+                    $content = preg_replace("/define\('CF_API_TOKEN', '.*?'\);/", "define('CF_API_TOKEN', '$cfApiToken');", $content);
+                    
                     file_put_contents($configFile, $content);
                     $status = 'تنظیمات با موفقیت در فایل config.php ذخیره شد.';
                 } else {
@@ -87,7 +105,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($queries as $query) {
                         $query = trim($query);
                         if (!empty($query)) {
-                            $pdo->exec($query);
+                            // Basic translation for D1 if needed
+                            if ($dbType === 'd1') {
+                                // SQLite doesn't like backticks often or some MySQL specifics
+                                $query = str_replace('NOT NULL AUTO_INCREMENT', 'PRIMARY KEY AUTOINCREMENT', $query);
+                                $query = preg_replace('/PRIMARY KEY \(`id`\)/', '', $query); // Remove separate primary key if handled above
+                                $query = str_replace('ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', '', $query);
+                                $query = preg_replace('/int\(\d+\)/', 'INTEGER', $query);
+                                $query = str_replace('datetime', 'DATETIME', $query);
+                            }
+                            
+                            $conn->exec($query);
                             $count++;
                         }
                     }
@@ -219,32 +247,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <form method="POST" style="display: flex; flex-direction: column; gap: 24px;">
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-                        <div class="input-group">
-                            <label class="label">میزبان (Host)</label>
-                            <input type="text" name="host" value="<?= htmlspecialchars($_POST['host'] ?? $currentConfig['host']) ?>" class="input" required>
-                        </div>
-                        <div class="input-group">
-                            <label class="label">پورت (Port)</label>
-                            <input type="text" name="port" value="<?= htmlspecialchars($_POST['port'] ?? $currentConfig['port']) ?>" class="input" required>
-                        </div>
-                    </div>
-                    
                     <div class="input-group">
-                        <label class="label">نام دیتابیس</label>
-                        <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="input" required>
+                        <label class="label">نوع پایگاه داده</label>
+                        <select name="db_type" id="db_type" class="input" style="font-family: inherit;" onchange="toggleFields()">
+                            <option value="mysql">MySQL / MariaDB</option>
+                            <option value="d1">Cloudflare D1 (HTTP API)</option>
+                        </select>
                     </div>
 
-                    <div class="grid">
-                        <div class="input-group">
-                            <label class="label">نام کاربری</label>
-                            <input type="text" name="user" value="<?= htmlspecialchars($_POST['user'] ?? $currentConfig['user']) ?>" class="input" required>
+                    <!-- MySQL Fields -->
+                    <div id="mysql_fields">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                            <div class="input-group">
+                                <label class="label">میزبان (Host)</label>
+                                <input type="text" name="host" value="<?= htmlspecialchars($_POST['host'] ?? $currentConfig['host']) ?>" class="input">
+                            </div>
+                            <div class="input-group">
+                                <label class="label">پورت (Port)</label>
+                                <input type="text" name="port" value="<?= htmlspecialchars($_POST['port'] ?? $currentConfig['port']) ?>" class="input">
+                            </div>
                         </div>
+                        
                         <div class="input-group">
-                            <label class="label">رمز عبور</label>
-                            <input type="password" name="pass" value="<?= htmlspecialchars($_POST['pass'] ?? $currentConfig['pass']) ?>" class="input">
+                            <label class="label">نام دیتابیس</label>
+                            <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="input">
+                        </div>
+
+                        <div class="grid">
+                            <div class="input-group">
+                                <label class="label">نام کاربری</label>
+                                <input type="text" name="user" value="<?= htmlspecialchars($_POST['user'] ?? $currentConfig['user']) ?>" class="input">
+                            </div>
+                            <div class="input-group">
+                                <label class="label">رمز عبور</label>
+                                <input type="password" name="pass" value="<?= htmlspecialchars($_POST['pass'] ?? $currentConfig['pass']) ?>" class="input">
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Cloudflare D1 Fields -->
+                    <div id="d1_fields" style="display: none;">
+                        <div class="input-group">
+                            <label class="label">Account ID</label>
+                            <input type="text" name="cf_account_id" value="<?= htmlspecialchars($_POST['cf_account_id'] ?? '') ?>" class="input" placeholder="e.g. 5e... (from CF Dashboard)">
+                        </div>
+                        <div class="input-group">
+                            <label class="label">Database ID</label>
+                            <input type="text" name="cf_database_id" value="<?= htmlspecialchars($_POST['cf_database_id'] ?? '1ef8dd3e-1f18-429c-b42c-dca29b965c8d') ?>" class="input">
+                        </div>
+                        <div class="input-group">
+                            <label class="label">API Token</label>
+                            <input type="password" name="cf_api_token" value="<?= htmlspecialchars($_POST['cf_api_token'] ?? '') ?>" class="input" placeholder="D1 Edit Permissions Token">
+                        </div>
+                    </div>
+
+                    <script>
+                        function toggleFields() {
+                            const type = document.getElementById('db_type').value;
+                            document.getElementById('mysql_fields').style.display = type === 'mysql' ? 'block' : 'none';
+                            document.getElementById('d1_fields').style.display = type === 'd1' ? 'block' : 'none';
+                        }
+                        // Init
+                        window.onload = toggleFields;
+                    </script>
 
                     <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 24px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">

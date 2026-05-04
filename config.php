@@ -8,6 +8,12 @@ define('DB_HOST', 'localhost');
 define('DB_PORT', '3306');
 define('DB_USER', 'root');
 define('DB_PASS', '');
+
+// Cloudflare D1 Support
+define('CF_ACCOUNT_ID', ''); 
+define('CF_DATABASE_ID', '1ef8dd3e-1f18-429c-b42c-dca29b965c8d');
+define('CF_API_TOKEN', '');
+define('DB_TYPE', 'mysql'); // mysql, d1
 define('DB_NAME', 'bale_bot_db');
 
 define('BOT_TOKEN', 'YOUR_BALE_BOT_TOKEN');

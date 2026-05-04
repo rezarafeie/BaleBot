@@ -66,14 +66,22 @@ class RegistrationManager {
         file_put_contents("{$dir}/{$key}.json", json_encode($data));
 
         if ($this->db) {
+            $type = Database::getInstance()->getType();
             // Sync with DB
-            $stmt = $this->db->prepare("INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
-                                       VALUES (?, ?, ?, ?, ?, ?, NOW()) 
-                                       ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=NOW()");
-            $stmt->execute([
-                $chat_id, $bot_id, $event_id, $step_index, $answers_json, $status,
-                $event_id, $step_index, $answers_json, $status
-            ]);
+            if ($type === 'd1') {
+                $stmt = $this->db->prepare("INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
+                                           VALUES (?, ?, ?, ?, ?, ?, datetime('now')) 
+                                           ON CONFLICT(chat_id, bot_id) DO UPDATE SET current_event_id=excluded.current_event_id, current_step_index=excluded.current_step_index, answers_json=excluded.answers_json, status=excluded.status, updated_at=datetime('now')");
+                $stmt->execute([ $chat_id, $bot_id, $event_id, $step_index, $answers_json, $status ]);
+            } else {
+                $stmt = $this->db->prepare("INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
+                                           VALUES (?, ?, ?, ?, ?, ?, NOW()) 
+                                           ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=NOW()");
+                $stmt->execute([
+                    $chat_id, $bot_id, $event_id, $step_index, $answers_json, $status,
+                    $event_id, $step_index, $answers_json, $status
+                ]);
+            }
         } else {
             require_once __DIR__ . '/LocalStore.php';
             LocalStore::getInstance()->queueSync('save', 'user_states', $data);
@@ -194,14 +202,27 @@ class RegistrationManager {
         ];
 
         if ($this->db) {
-            $q = "INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
-                  ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=COALESCE(?, username), phone=COALESCE(?, phone), last_interaction_at=NOW()";
-            $stmt = $this->db->prepare($q);
-            $res = $stmt->execute([
-                $chat_id, $bale_user_id, $name, $username, $phone, $bot_id, $platform,
-                $name, $username, $phone
-            ]);
+            $type = Database::getInstance()->getType();
+            if ($type === 'd1') {
+                $q = "INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now')) 
+                      ON CONFLICT(chat_id, bot_id) DO UPDATE SET 
+                        name=COALESCE(excluded.name, name), 
+                        username=COALESCE(excluded.username, username), 
+                        phone=COALESCE(excluded.phone, phone), 
+                        last_interaction_at=datetime('now')";
+                $stmt = $this->db->prepare($q);
+                $res = $stmt->execute([ $chat_id, $bale_user_id, $name, $username, $phone, $bot_id, $platform ]);
+            } else {
+                $q = "INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
+                      ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=COALESCE(?, username), phone=COALESCE(?, phone), last_interaction_at=NOW()";
+                $stmt = $this->db->prepare($q);
+                $res = $stmt->execute([
+                    $chat_id, $bale_user_id, $name, $username, $phone, $bot_id, $platform,
+                    $name, $username, $phone
+                ]);
+            }
         } else {
             require_once __DIR__ . '/LocalStore.php';
             LocalStore::getInstance()->queueSync('save', 'bot_users', $data);

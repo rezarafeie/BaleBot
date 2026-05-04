@@ -70,20 +70,52 @@ class SyncManager {
     }
 
     private static function syncBotUser($db, $data) {
-        $stmt = $db->prepare("INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=COALESCE(?, username), phone=COALESCE(?, phone), last_interaction_at=?");
-        $stmt->execute([
-            $data['chat_id'], $data['bale_user_id'], $data['name'], $data['username'], $data['phone'] ?? null, $data['bot_id'], $data['platform'], $data['first_interaction_at'], $data['last_interaction_at'],
-            $data['name'], $data['username'], $data['phone'] ?? null, $data['last_interaction_at']
-        ]);
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+        if ($type === 'd1') {
+            $sql = "INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                    ON CONFLICT(chat_id, bot_id) DO UPDATE SET name=COALESCE(excluded.name, name), username=COALESCE(excluded.username, username), phone=COALESCE(excluded.phone, phone), last_interaction_at=excluded.last_interaction_at";
+        } else {
+            $sql = "INSERT INTO bot_users (chat_id, bale_user_id, name, username, phone, bot_id, platform, first_interaction_at, last_interaction_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                    ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=COALESCE(?, username), phone=COALESCE(?, phone), last_interaction_at=?";
+        }
+        
+        $stmt = $db->prepare($sql);
+        if ($type === 'd1') {
+             $stmt->execute([
+                $data['chat_id'], $data['bale_user_id'], $data['name'], $data['username'], $data['phone'] ?? null, $data['bot_id'], $data['platform'], $data['first_interaction_at'], $data['last_interaction_at']
+            ]);
+        } else {
+            $stmt->execute([
+                $data['chat_id'], $data['bale_user_id'], $data['name'], $data['username'], $data['phone'] ?? null, $data['bot_id'], $data['platform'], $data['first_interaction_at'], $data['last_interaction_at'],
+                $data['name'], $data['username'], $data['phone'] ?? null, $data['last_interaction_at']
+            ]);
+        }
     }
 
     private static function syncUserState($db, $data) {
-        $stmt = $db->prepare("INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
-                                   VALUES (?, ?, ?, ?, ?, ?, ?) 
-                                   ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=?");
-        $stmt->execute([
-            $data['chat_id'], $data['bot_id'], $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at'],
-            $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at']
-        ]);
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+        if ($type === 'd1') {
+            $sql = "INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?) 
+                    ON CONFLICT(chat_id, bot_id) DO UPDATE SET current_event_id=excluded.current_event_id, current_step_index=excluded.current_step_index, answers_json=excluded.answers_json, status=excluded.status, updated_at=excluded.updated_at";
+        } else {
+            $sql = "INSERT INTO user_states (chat_id, bot_id, current_event_id, current_step_index, answers_json, status, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?) 
+                    ON DUPLICATE KEY UPDATE current_event_id=?, current_step_index=?, answers_json=?, status=?, updated_at=?";
+        }
+
+        $stmt = $db->prepare($sql);
+        if ($type === 'd1') {
+             $stmt->execute([
+                $data['chat_id'], $data['bot_id'], $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at']
+            ]);
+        } else {
+            $stmt->execute([
+                $data['chat_id'], $data['bot_id'], $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at'],
+                $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at']
+            ]);
+        }
     }
 }

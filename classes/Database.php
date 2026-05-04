@@ -7,25 +7,46 @@ class Database {
     private $connectionError = null;
 
     private function __construct() {
-        if (!defined('DB_HOST')) return; // Not configured yet
+        if (!defined('DB_TYPE')) return;
         
-        try {
-            $dsn = "mysql:host=" . DB_HOST;
-            if (defined('DB_PORT') && DB_PORT) {
-                $dsn .= ";port=" . DB_PORT;
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+
+        if ($type === 'mysql') {
+            if (!defined('DB_HOST')) return;
+            try {
+                $dsn = "mysql:host=" . DB_HOST;
+                if (defined('DB_PORT') && DB_PORT) {
+                    $dsn .= ";port=" . DB_PORT;
+                }
+                $dsn .= ";dbname=" . DB_NAME . ";charset=utf8mb4";
+                
+                $this->conn = new PDO($dsn, DB_USER, DB_PASS, [
+                    PDO::ATTR_TIMEOUT => 3,
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                ]);
+                $this->isConnected = true;
+            } catch(PDOException $e) {
+                $this->isConnected = false;
+                $this->connectionError = $e->getMessage();
+                error_log("Database Connection failed: " . $e->getMessage());
             }
-            $dsn .= ";dbname=" . DB_NAME . ";charset=utf8mb4";
+        } elseif ($type === 'd1') {
+            if (!defined('CF_ACCOUNT_ID') || !CF_ACCOUNT_ID) {
+                $this->isConnected = false;
+                $this->connectionError = "Cloudflare Account ID is missing.";
+                return;
+            }
+            require_once __DIR__ . '/CloudflareD1.php';
+            $this->conn = new CloudflareD1(CF_ACCOUNT_ID, CF_DATABASE_ID, CF_API_TOKEN);
             
-            $this->conn = new PDO($dsn, DB_USER, DB_PASS, [
-                PDO::ATTR_TIMEOUT => 3, // 3 seconds timeout
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-            ]);
-            $this->isConnected = true;
-        } catch(PDOException $e) {
-            $this->isConnected = false;
-            $this->connectionError = $e->getMessage();
-            error_log("Database Connection failed: " . $e->getMessage());
+            // Basic ping to verify
+            if ($this->conn->query("SELECT 1")) {
+                $this->isConnected = true;
+            } else {
+                $this->isConnected = false;
+                $this->connectionError = $this->conn->getError();
+            }
         }
     }
 
@@ -46,5 +67,9 @@ class Database {
 
     public function getError() {
         return $this->connectionError;
+    }
+
+    public function getType() {
+        return defined('DB_TYPE') ? DB_TYPE : 'mysql';
     }
 }
