@@ -10,38 +10,50 @@ if (file_exists('config.php')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نصب سیستم BotMan</title>
-    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        :root {
+            --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+        }
+        body { 
+            font-family: var(--font-persian); 
+            background: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+            direction: rtl;
+        }
+        .card { background: white; max-width: 512px; width: 100%; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.1); border: 1px solid #f1f5f9; padding: 48px; }
+        .step { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 1.25rem; padding: 20px; display: flex; gap: 16px; margin-bottom: 16px; }
+        .step-num { width: 24px; height: 24px; background: #dbeafe; color: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+        .btn { display: block; text-align: center; padding: 16px; border-radius: 1rem; text-decoration: none; font-weight: 700; transition: all 0.2s; font-size: 14px; }
+        .btn-primary { background: #2563eb; color: white; margin-bottom: 12px; }
+        .btn-secondary { background: white; border: 1px solid #e2e8f0; color: #475569; }
+    </style>
 </head>
-<body class="bg-[#f8fafc] text-[#1e293b] min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white p-8 rounded-xl border border-[#e2e8f0] shadow-sm max-w-lg w-full">
-        <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+<body>
+    <div class="card">
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 32px; justify-content: center;">
+             <div style="width: 48px; height: 48px; background: #2563eb; color: white; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px;">B</div>
+             <h1 style="margin: 0; font-size: 24px; font-weight: 900;">راه‌اندازی BotMan</h1>
         </div>
-        <h2 class="text-2xl font-bold text-center mb-6">نصب و راه‌اندازی BotMan</h2>
         
-        <div class="space-y-4">
-            <div class="flex items-start bg-[#f8fafc] p-4 rounded-lg border border-[#f1f5f9]">
-                <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0 ml-3">۱</div>
-                <p class="text-sm text-[#475569] leading-relaxed">ابتدا فایل <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-800" dir="ltr">config.php</code> را با توجه به تنظیمات دیتابیس و توکن بات خود ایجاد یا ویرایش کنید.</p>
-            </div>
-            <div class="flex items-start bg-[#f8fafc] p-4 rounded-lg border border-[#f1f5f9]">
-                <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0 ml-3">۲</div>
-                <p class="text-sm text-[#475569] leading-relaxed">فایل‌های <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-800" dir="ltr">sql/install.sql</code> را در پایگاه داده (MySQL) خود آپلود (Import) نمایید.</p>
-            </div>
-            <div class="flex items-start bg-[#f8fafc] p-4 rounded-lg border border-[#f1f5f9]">
-                <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0 ml-3">۳</div>
-                <p class="text-sm text-[#475569] leading-relaxed">پس از نصب، می‌توانید با نام کاربری <strong class="text-gray-900" dir="ltr">admin</strong> و رمز عبور <strong class="text-gray-900" dir="ltr">admin123</strong> وارد پنل مدیریت شوید.<br><span class="text-xs text-red-500 mt-1 block">توجه: پس از ورود اول حتماً رمز عبور را تغییر دهید.</span></p>
-            </div>
+        <div class="step">
+            <div class="step-num">۱</div>
+            <div style="font-size: 13px; color: #475569; line-height: 1.6;">ابتدا دیتابیس خود را آماده کنید. سپس از دکمه شروع زیر برای پیکربندی خودکار استفاده کنید.</div>
         </div>
 
-        <div class="mt-8 flex flex-col gap-3">
-            <a href="db-setup.php" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl text-sm transition-all shadow-lg shadow-blue-200">
-                شروع راه‌اندازی خودکار
-            </a>
-            <a href="admin/login.php" class="inline-block bg-white border border-slate-200 text-slate-600 font-bold py-3 px-8 rounded-xl text-sm transition-all hover:bg-slate-50">
-                ورود به پنل مدیریت
-            </a>
+        <div class="step">
+            <div class="step-num">۲</div>
+            <div style="font-size: 13px; color: #475569; line-height: 1.6;">پس از اتصال، جداول سیستم به صورت خودکار ساخته می‌شوند.</div>
+        </div>
+
+        <div style="margin-top: 32px;">
+            <a href="db-setup.php" class="btn btn-primary">شروع راه‌اندازی خودکار</a>
+            <a href="admin/login.php" class="btn btn-secondary">ورود به پنل (اگر قبلاً نصب شده)</a>
         </div>
     </div>
 </body>

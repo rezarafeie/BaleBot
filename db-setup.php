@@ -109,11 +109,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error .= "DB Name: $dbName<br>";
             $error .= "DSN: $dsn_base<br>";
             
-            // Try to get server public IP
-            $serverIp = $_SERVER['SERVER_ADDR'] ?? 'Could not detect';
-            $cidr = ($serverIp !== 'Could not detect') ? $serverIp . '/32' : 'N/A';
-            $error .= "Your Server Public IP: <span class='text-blue-400 font-bold'>$serverIp</span><br>";
-            $error .= "Whitelist CIDR (ArvanCloud): <span class='text-amber-400 font-bold select-all'>$cidr</span> (Copy this to whitelist)<br>";
+            // Try to detect Outbound Public IP
+            $publicIp = 'Could not detect';
+            $services = ['https://api.ipify.org', 'https://ifconfig.me/ip', 'https://icanhazip.com'];
+            foreach ($services as $service) {
+                if ($content = @file_get_contents($service, false, stream_context_create(['http' => ['timeout' => 2]]))) {
+                    $publicIp = trim($content);
+                    break;
+                }
+            }
+            
+            $serverIpDetected = ($publicIp !== 'Could not detect') ? $publicIp : ($_SERVER['SERVER_ADDR'] ?? 'N/A');
+            $cidr = ($serverIpDetected !== 'N/A') ? $serverIpDetected . '/32' : 'N/A';
+            
+            $error .= "Your Server Public IP: <span class='text-blue-400 font-bold'>$serverIpDetected</span><br>";
+            $error .= "ArvanCloud Whitelist CIDR: <span class='text-amber-400 font-bold select-all'>$cidr</span> (Add this to your DB Whitelist)<br>";
             
             // Try to resolve host
             $ip = gethostbyname($host);
@@ -142,79 +152,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تنظیمات پایگاه داده | BotMan</title>
-    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
-    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        :root {
+            --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+        }
+        body { 
+            font-family: var(--font-persian); 
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: screen;
+            padding: 24px;
+        }
+        .container { max-width: 672px; width: 100%; }
+        .card { background: white; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.1); border: 1px solid #f1f5f9; overflow: hidden; padding: 40px; }
+        .input-group { margin-bottom: 24px; }
+        .label { display: block; color: #94a3b8; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+        .input { width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 1rem; px: 24px; py: 16px; font-size: 14px; outline: none; transition: all 0.2s; font-family: monospace; }
+        .input:focus { border-color: #2563eb; background: white; }
+        .btn { display: block; width: 100%; padding: 20px; border-radius: 1.5rem; font-weight: 700; cursor: pointer; transition: all 0.2s; appearance: none; border: none; text-align: center; text-decoration: none; }
+        .btn-primary { background: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
+        .btn-secondary { background: #0f172a; color: white; }
+        .btn-ghost { background: white; border: 1px solid #e2e8f0; color: #475569; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .status { padding: 20px; border-radius: 1.5rem; margin-bottom: 32px; font-size: 14px; font-weight: 700; border: 1px solid transparent; display: flex; align-items: center; gap: 12px; }
+        .status-success { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
+        .status-error { background: #fef2f2; color: #dc2626; border-color: #fee2e2; }
+        .text-left { text-align: left; }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex items-center justify-center p-6">
+<body dir="rtl">
 
     <div class="max-w-2xl w-full">
         <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden shadow-blue-100/50">
             <div class="p-10 md:p-14">
                 <div class="flex items-center gap-4 mb-10">
-                    <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-blue-200">B</div>
-                    <div>
-                        <h1 class="text-2xl font-black">تنظیمات پایگاه داده</h1>
-                        <p class="text-slate-400 text-sm">پیکربندی اتصال MySQL و نصب جداول</p>
+                    <div style="width: 48px; h: 48px; background: #2563eb; color: white; border-radius: 12px; display: flex; align-items: center; justify-center; font-weight: bold; font-size: 24px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.4);">B</div>
+                    <div style="margin-right: 15px;">
+                        <h1 style="margin: 0; font-size: 24px; font-weight: 900;">تنظیمات پایگاه داده</h1>
+                        <p style="margin: 0; color: #94a3b8; font-size: 14px;">پیکربندی اتصال MySQL و نصب جداول</p>
                     </div>
                 </div>
 
                 <?php if ($status): ?>
-                    <div class="bg-emerald-50 text-emerald-600 p-5 rounded-2xl mb-8 text-sm font-bold border border-emerald-100 flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></div>
+                    <div class="status status-success">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: #059669; animation: pulse 2s infinite;"></div>
                         <?= $status ?>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($error): ?>
-                    <div class="bg-rose-50 text-rose-600 p-5 rounded-2xl mb-8 text-sm font-bold border border-rose-100 italic">
-                        <?= $error ?>
-                        <?php if (strpos($error, 'timed out') !== false): ?>
-                            <div class="mt-2 text-xs font-normal text-rose-500 not-italic">
-                                راهنما: اگر با خطای Timeout مواجه شدید، اطمینان حاصل کنید که دیتابیس شما اجازه دسترسی از خارج (External Access) را دارد و آی‌پی‌های سرور در لیست سفید (Whitelist) قرار دارند.
-                            </div>
-                        <?php endif; ?>
+                    <div class="status status-error" style="flex-direction: column; align-items: flex-start;">
+                        <div><?= $error ?></div>
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" class="space-y-6">
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div class="md:col-span-2">
-                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">میزبان (Host)</label>
-                            <input type="text" name="host" value="<?= htmlspecialchars($_POST['host'] ?? $currentConfig['host']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
+                <form method="POST" style="display: flex; flex-direction: column; gap: 24px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <div class="input-group">
+                            <label class="label">میزبان (Host)</label>
+                            <input type="text" name="host" value="<?= htmlspecialchars($_POST['host'] ?? $currentConfig['host']) ?>" class="input" required>
                         </div>
-                        <div>
-                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">پورت (Port)</label>
-                            <input type="text" name="port" value="<?= htmlspecialchars($_POST['port'] ?? $currentConfig['port']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
+                        <div class="input-group">
+                            <label class="label">پورت (Port)</label>
+                            <input type="text" name="port" value="<?= htmlspecialchars($_POST['port'] ?? $currentConfig['port']) ?>" class="input" required>
                         </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">نام دیتابیس</label>
-                        <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
+                    <div class="input-group">
+                        <label class="label">نام دیتابیس</label>
+                        <input type="text" name="db_name" value="<?= htmlspecialchars($_POST['db_name'] ?? $currentConfig['db']) ?>" class="input" required>
                     </div>
 
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">نام کاربری</label>
-                            <input type="text" name="user" value="<?= htmlspecialchars($_POST['user'] ?? $currentConfig['user']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono" required>
+                    <div class="grid">
+                        <div class="input-group">
+                            <label class="label">نام کاربری</label>
+                            <input type="text" name="user" value="<?= htmlspecialchars($_POST['user'] ?? $currentConfig['user']) ?>" class="input" required>
                         </div>
-                        <div>
-                            <label class="block text-slate-400 text-xs font-black uppercase tracking-widest mb-3 pr-2">رمز عبور</label>
-                            <input type="password" name="pass" value="<?= htmlspecialchars($_POST['pass'] ?? $currentConfig['pass']) ?>" class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono">
+                        <div class="input-group">
+                            <label class="label">رمز عبور</label>
+                            <input type="password" name="pass" value="<?= htmlspecialchars($_POST['pass'] ?? $currentConfig['pass']) ?>" class="input">
                         </div>
                     </div>
 
-                    <div class="pt-6 flex flex-col gap-4">
-                        <div class="grid grid-cols-2 gap-4">
-                             <button type="submit" name="action" value="test" class="py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+                    <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 24px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                             <button type="submit" name="action" value="test" class="btn btn-ghost">
                                 تست اتصال
                             </button>
-                            <button type="submit" name="action" value="save" class="py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all">
+                            <button type="submit" name="action" value="save" class="btn btn-secondary">
                                 ذخیره تنظیمات
                             </button>
                         </div>
-                        <button type="submit" name="action" value="migrate" class="py-5 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <button type="submit" name="action" value="migrate" class="btn btn-primary">
                             اجرای SQL و نهایی‌سازی
                         </button>
                     </div>

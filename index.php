@@ -7,15 +7,25 @@ require_once __DIR__ . '/config.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BotMan | مدیریت هوشمند ربات‌ها</title>
-    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
-    <link rel="stylesheet" href="assets/css/style.css">
     <style>
+        :root {
+            --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+            --primary: #2563eb;
+            --slate-900: #0f172a;
+            --slate-400: #94a3b8;
+        }
+        body { 
+            font-family: var(--font-persian); 
+            background: white;
+            color: var(--slate-900);
+            margin: 0;
+            direction: rtl;
+        }
         @keyframes float {
             0% { transform: translateY(0px) rotate(3deg); }
             50% { transform: translateY(-20px) rotate(5deg); }
             100% { transform: translateY(0px) rotate(3deg); }
         }
-        .animate-float { animation: float 6s ease-in-out infinite; }
         .hero-gradient {
             background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
         }
