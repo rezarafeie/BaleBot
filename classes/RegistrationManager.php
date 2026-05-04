@@ -125,7 +125,9 @@ class RegistrationManager {
             }
         } else {
             require_once __DIR__ . '/LocalStore.php';
+            $reg_id = "local_" . time() . "_" . rand(100, 999);
             $data = [
+                'id' => $reg_id,
                 'event_id' => $event_id,
                 'chat_id' => $chat_id,
                 'bot_id' => $bot_id,
@@ -135,8 +137,7 @@ class RegistrationManager {
                 'created_at' => $created_at,
                 'answers' => $answers
             ];
-            LocalStore::getInstance()->queueSync('save', 'registrations', $data);
-            $reg_id = "local_" . time();
+            LocalStore::getInstance()->save('registrations', $reg_id, $data);
         }
         
         // Update contact info if phone was provided
@@ -263,9 +264,30 @@ class RegistrationManager {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $results = $stmt->fetchAll();
+        } else {
+            // Pull from LocalStore
+            require_once __DIR__ . '/LocalStore.php';
+            $all = LocalStore::getInstance()->findAll('registrations');
+            foreach ($all as $r) {
+                if (($event_id && $r['event_id'] != $event_id) || ($bot_id && $r['bot_id'] != $bot_id)) continue;
+                $results[] = [
+                    'id' => $r['id'],
+                    'event_id' => $r['event_id'],
+                    'chat_id' => $r['chat_id'],
+                    'bot_id' => $r['bot_id'],
+                    'answers_json' => $r['answers_json'],
+                    'status' => $r['status'],
+                    'platform' => $r['platform'],
+                    'created_at' => $r['created_at'],
+                    'event_title' => 'رویداد #' . $r['event_id'],
+                    'user_name' => 'کاربر محلی',
+                    'user_phone' => '',
+                    'user_username' => ''
+                ];
+            }
         }
         
-        // Merge from local queue
+        // Merge from local queue for items not yet in registrations folder (if any)
         require_once __DIR__ . '/LocalStore.php';
         $queue = LocalStore::getInstance()->getQueue();
         foreach ($queue as $item) {

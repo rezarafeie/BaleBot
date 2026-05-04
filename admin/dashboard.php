@@ -15,19 +15,19 @@ if ($db) {
 
         $total_users = $db->prepare("SELECT COUNT(*) FROM bot_users WHERE bot_id = ?");
         $total_users->execute([$bot_id]);
-        $total_users = $total_users->fetchColumn();
+        $total_users = $total_users->fetchColumn() ?: 0;
 
         $total_events = $db->prepare("SELECT COUNT(*) FROM events WHERE bot_id = ?");
         $total_events->execute([$bot_id]);
-        $total_events = $total_events->fetchColumn();
+        $total_events = $total_events->fetchColumn() ?: 0;
 
         $total_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE bot_id = ?");
         $total_regs->execute([$bot_id]);
-        $total_regs = $total_regs->fetchColumn();
+        $total_regs = $total_regs->fetchColumn() ?: 0;
 
         $today_regs = $db->prepare("SELECT COUNT(*) FROM registrations WHERE DATE(created_at) = CURDATE() AND bot_id = ?");
         $today_regs->execute([$bot_id]);
-        $today_regs = $today_regs->fetchColumn();
+        $today_regs = $today_regs->fetchColumn() ?: 0;
 
         $stmt = $db->prepare("SELECT r.*, e.title as event_title, u.name as user_name FROM registrations r JOIN events e ON r.event_id = e.id LEFT JOIN bot_users u ON r.chat_id = u.chat_id AND r.bot_id = u.bot_id WHERE r.bot_id = ? ORDER BY r.id DESC LIMIT 5");
         $stmt->execute([$bot_id]);
@@ -35,15 +35,63 @@ if ($db) {
     } catch (Exception $e) { $db = null; }
 }
 
-if (!$db): ?>
-<div class="bg-red-50 border-r-4 border-red-500 p-4 mb-6">
-    <div class="flex">
+if (!$db) {
+    // JSON Fallback for Stats
+    require_once __DIR__ . '/../classes/LocalStore.php';
+    $store = LocalStore::getInstance();
+    
+    // Bots
+    $bots = $store->findAll('bots');
+    $currentBot = null;
+    foreach ($bots as $b) { if ($b['id'] == $bot_id) $currentBot = $b; }
+    
+    // Users
+    $allUsers = $store->findAll('bot_users');
+    $total_users = count(array_filter($allUsers, function($u) use ($bot_id) { return ($u['bot_id'] ?? 0) == $bot_id; }));
+    
+    // Events
+    $allEvents = $store->findAll('events');
+    $total_events = count(array_filter($allEvents, function($e) use ($bot_id) { return ($e['bot_id'] ?? 0) == $bot_id; }));
+    
+    // Registrations
+    $allRegs = $store->findAll('registrations'); // This might be empty if they only sync one way
+    $total_regs = count(array_filter($allRegs, function($r) use ($bot_id) { return ($r['bot_id'] ?? 0) == $bot_id; }));
+    
+    $today = date('Y-m-d');
+    $today_regs = count(array_filter($allRegs, function($r) use ($bot_id, $today) { 
+        return ($r['bot_id'] ?? 0) == $bot_id && strpos($r['created_at'], $today) === 0; 
+    }));
+}
+
+// Sync Queue Status
+require_once __DIR__ . '/../classes/LocalStore.php';
+$syncQueue = LocalStore::getInstance()->getQueue();
+$pendingSyncCount = count($syncQueue);
+?>
+
+<?php if ($pendingSyncCount > 0): ?>
+<div class="bg-blue-50 border-r-4 border-blue-500 p-4 mb-6">
+    <div class="flex items-center">
         <div class="flex-shrink-0">
-            <?= render_icon('exclamation-triangle', 'text-red-500') ?>
+            <?= render_icon('refresh-cw', 'text-blue-500 animate-spin') ?>
         </div>
         <div class="mr-3">
-            <p class="text-sm text-red-700 font-bold">پایگاه داده متصل نیست!</p>
-            <p class="text-xs text-red-600 mt-1">اطلاعات نمایش داده شده ممکن است ناقص باشد یا بارگذاری نشود. لطفاً تنظیمات پایگاه داده را بررسی کنید.</p>
+            <p class="text-sm text-blue-700 font-bold">در حال همگام‌سازی با پایگاه داده...</p>
+            <p class="text-xs text-blue-600 mt-1">تعداد <?= $pendingSyncCount ?> مورد در صف همگام‌سازی وجود دارد که به محض اتصال دیتابیس منتقل خواهند شد.</p>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!$db): ?>
+<div class="bg-amber-50 border-r-4 border-amber-500 p-4 mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <?= render_icon('database', 'text-amber-500') ?>
+        </div>
+        <div class="mr-3">
+            <p class="text-sm text-amber-700 font-bold">حالت استفاده آفلاین!</p>
+            <p class="text-xs text-amber-600 mt-1">اتصال به پایگاه داده (MySQL/Cloudflare) برقرار نیست. سیستم در حال استفاده از ذخیره‌ساز محلی است و تمامی عملیات‌ها با موفقیت انجام می‌شوند.</p>
         </div>
     </div>
 </div>

@@ -61,10 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px; text-align: center;">ورود به پنل BotMan</h2>
         
-        <?php if (!$dbConnected): ?>
-            <div class="alert">پایگاه داده در دسترس نیست. ورود امکان‌پذیر نمی‌باشد.</div>
-        <?php endif; ?>
-
         <?php if ($error): ?>
             <div class="alert"><?= $error ?></div>
         <?php endif; ?>
@@ -78,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="label">رمز عبور</label>
                 <input type="password" name="password" class="input" required>
             </div>
-            <button type="submit" class="btn" <?= !$dbConnected ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>ورود به حساب</button>
+            <button type="submit" class="btn">ورود به حساب</button>
             <div style="margin-top: 24px; text-align: center;">
                 <span style="font-size: 12px; color: #94a3b8;">حساب کاربری ندارید؟</span>
                 <a href="../register.php" style="font-size: 12px; color: #2563eb; font-weight: 700; text-decoration: none; margin-right: 4px;">ثبت‌نام کنید</a>

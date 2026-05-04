@@ -183,5 +183,25 @@ class SyncManager {
                 $data['title'], $data['slug'], $data['description'], $data['welcome_message'], $data['welcome_media_id'], $data['completion_message'], $data['completion_media_id'], $data['duplicate_message'], $data['is_active'], $data['duplicate_setting'], $data['use_ai'], $data['ai_prompt'], $data['ai_wait_message'], $data['ai_wait_media_id'], $data['action_type'], $data['action_webhook_url'], $data['action_webhook_body'], $data['action_http_url'], $data['platforms']
             ]);
         }
+
+        // Sync Fields if present
+        if (isset($data['fields']) && is_array($data['fields'])) {
+            foreach ($data['fields'] as $f) {
+                if ($type === 'd1') {
+                    $sql_f = "INSERT INTO event_fields (id, event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                              ON CONFLICT(id) DO UPDATE SET label=excluded.label, field_key=excluded.field_key, type=excluded.type, is_required=excluded.is_required, sort_order=excluded.sort_order, validation_rule=excluded.validation_rule, help_text=excluded.help_text, error_message=excluded.error_message, media_path=excluded.media_path, media_id=excluded.media_id, options_json=excluded.options_json, is_active=excluded.is_active";
+                    $db->prepare($sql_f)->execute([
+                        $f['id'], $data['id'], $f['label'], $f['field_key'], $f['type'], $f['is_required'], $f['sort_order'], $f['validation_rule'], $f['help_text'], $f['error_message'], $f['media_path'], $f['media_id'], $f['options_json'], $f['is_active']
+                    ]);
+                } else {
+                    $sql_f = "INSERT INTO event_fields (id, event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, media_id=?, options_json=?, is_active=?";
+                    $db->prepare($sql_f)->execute([
+                        $f['id'], $data['id'], $f['label'], $f['field_key'], $f['type'], $f['is_required'], $f['sort_order'], $f['validation_rule'], $f['help_text'], $f['error_message'], $f['media_path'], $f['media_id'], $f['options_json'], $f['is_active'],
+                        $f['label'], $f['field_key'], $f['type'], $f['is_required'], $f['sort_order'], $f['validation_rule'], $f['help_text'], $f['error_message'], $f['media_path'], $f['media_id'], $f['options_json'], $f['is_active']
+                    ]);
+                }
+            }
+        }
     }
 }
