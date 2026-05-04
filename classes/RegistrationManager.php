@@ -96,9 +96,11 @@ class RegistrationManager {
         if (file_exists($cachePath)) {
             @unlink($cachePath);
         }
-        // Also clear in DB just in case
-        $stmt = $this->db->prepare("DELETE FROM user_states WHERE chat_id = ? AND bot_id = ?");
-        $stmt->execute([$chat_id, $bot_id]);
+        
+        if ($this->db) {
+            $stmt = $this->db->prepare("DELETE FROM user_states WHERE chat_id = ? AND bot_id = ?");
+            $stmt->execute([$chat_id, $bot_id]);
+        }
         return true;
     }
 
@@ -160,7 +162,7 @@ class RegistrationManager {
     }
 
     public function checkDuplicate($chat_id, $event_id, $setting, $bot_id = null) {
-        if ($setting == 'allow') return false;
+        if ($setting == 'allow' || !$this->db) return false;
         
         if ($setting == 'block_chat_id') {
             $stmt = $this->db->prepare("SELECT COUNT(*) FROM registrations WHERE chat_id = ? AND event_id = ?");
@@ -295,6 +297,17 @@ class RegistrationManager {
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
+
+        if (!$this->db) {
+            if (strpos($id, 'pending_') === 0) {
+                // Remove from local queue
+                require_once __DIR__ . '/LocalStore.php';
+                LocalStore::getInstance()->removeFromQueueByTimestamp(str_replace('pending_', '', $id));
+                return true;
+            }
+            return false;
+        }
+
         $sql = "SELECT id FROM registrations WHERE id = ?";
         $params = [$id];
         if ($bot_id) {

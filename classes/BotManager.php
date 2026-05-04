@@ -237,6 +237,26 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         if ($owner_id === null && isset($_SESSION['admin_id'])) {
             $owner_id = $_SESSION['admin_id'];
         }
+
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $id = time();
+            $data = [
+                'id' => $id,
+                'name' => $name,
+                'username' => $username,
+                'token' => $token,
+                'telegram_token' => $telegram_token,
+                'rubika_token' => $rubika_token,
+                'owner_id' => $owner_id,
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            LocalStore::getInstance()->save('bots', $id, $data);
+            $this->ensureWebhookFile($username);
+            return $id;
+        }
+
         $stmt = $this->db->prepare("INSERT INTO bots (name, username, token, telegram_token, rubika_token, owner_id) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token, $owner_id]);
         $id = $this->db->lastInsertId();
@@ -255,6 +275,23 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         if ($owner_id === null && isset($_SESSION['admin_id'])) {
             $owner_id = $_SESSION['admin_id'];
         }
+
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $bot = LocalStore::getInstance()->get('bots', $id);
+            if ($bot) {
+                $bot['name'] = $name;
+                $bot['username'] = $username;
+                $bot['token'] = $token;
+                $bot['telegram_token'] = $telegram_token;
+                $bot['rubika_token'] = $rubika_token;
+                $bot['is_active'] = $is_active ? 1 : 0;
+                LocalStore::getInstance()->save('bots', $id, $bot);
+                $this->ensureWebhookFile($username);
+            }
+            return true;
+        }
+
         $query = "UPDATE bots SET name = ?, username = ?, token = ?, telegram_token = ?, rubika_token = ?, is_active = ? WHERE id = ?";
         $params = [$name, $username, $token, $telegram_token, $rubika_token, $is_active ? 1 : 0, $id];
         if ($owner_id) {
@@ -273,6 +310,13 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         if ($owner_id === null && isset($_SESSION['admin_id'])) {
             $owner_id = $_SESSION['admin_id'];
         }
+
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            LocalStore::getInstance()->delete('bots', $id);
+            return true;
+        }
+
         $query = "DELETE FROM bots WHERE id = ?";
         $params = [$id];
         if ($owner_id) {

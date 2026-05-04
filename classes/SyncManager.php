@@ -29,6 +29,12 @@ class SyncManager {
                     self::syncBotUser($db, $data);
                 } elseif ($collection === 'user_states') {
                     self::syncUserState($db, $data);
+                } elseif ($collection === 'bots') {
+                    self::syncBot($db, $data, $action);
+                } elseif ($collection === 'events') {
+                    self::syncEvent($db, $data, $action);
+                } elseif ($collection === 'admins') {
+                    self::syncAdmin($db, $data, $action);
                 }
                 $successCount++;
             } catch (Exception $e) {
@@ -115,6 +121,66 @@ class SyncManager {
             $stmt->execute([
                 $data['chat_id'], $data['bot_id'], $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at'],
                 $data['current_event_id'], $data['current_step_index'], $data['answers_json'], $data['status'], $data['updated_at']
+            ]);
+        }
+    }
+
+    private static function syncBot($db, $data, $action) {
+        if ($action === 'delete') {
+            $stmt = $db->prepare("DELETE FROM bots WHERE id = ?");
+            $stmt->execute([$data['id']]);
+            return;
+        }
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+        if ($type === 'd1') {
+            $sql = "INSERT INTO bots (id, name, username, token, telegram_token, rubika_token, owner_id, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                    ON CONFLICT(id) DO UPDATE SET name=excluded.name, username=excluded.username, token=excluded.token, telegram_token=excluded.telegram_token, rubika_token=excluded.rubika_token, is_active=excluded.is_active";
+            $db->prepare($sql)->execute([
+                $data['id'], $data['name'], $data['username'], $data['token'], $data['telegram_token'], $data['rubika_token'], $data['owner_id'], $data['is_active'], $data['created_at']
+            ]);
+        } else {
+            $sql = "INSERT INTO bots (id, name, username, token, telegram_token, rubika_token, owner_id, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, username=?, token=?, telegram_token=?, rubika_token=?, is_active=?";
+            $db->prepare($sql)->execute([
+                $data['id'], $data['name'], $data['username'], $data['token'], $data['telegram_token'], $data['rubika_token'], $data['owner_id'], $data['is_active'], $data['created_at'],
+                $data['name'], $data['username'], $data['token'], $data['telegram_token'], $data['rubika_token'], $data['is_active']
+            ]);
+        }
+    }
+
+    private static function syncAdmin($db, $data, $action) {
+        if ($action === 'delete') return;
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+        if ($type === 'd1') {
+            $sql = "INSERT INTO admins (id, username, password_hash, email, created_at) VALUES (?, ?, ?, ?, ?) 
+                    ON CONFLICT(id) DO UPDATE SET username=excluded.username, password_hash=excluded.password_hash, email=excluded.email";
+            $db->prepare($sql)->execute([$data['id'], $data['username'], $data['password_hash'], $data['email'], $data['created_at']]);
+        } else {
+            $sql = "INSERT INTO admins (id, username, password_hash, email, created_at) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE username=?, password_hash=?, email=?";
+            $db->prepare($sql)->execute([
+                $data['id'], $data['username'], $data['password_hash'], $data['email'], $data['created_at'],
+                $data['username'], $data['password_hash'], $data['email']
+            ]);
+        }
+    }
+
+    private static function syncEvent($db, $data, $action) {
+        if ($action === 'delete') {
+            $db->prepare("DELETE FROM events WHERE id = ?")->execute([$data['id']]);
+            return;
+        }
+        $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+        if ($type === 'd1') {
+             $sql = "INSERT INTO events (id, bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                    ON CONFLICT(id) DO UPDATE SET title=excluded.title, slug=excluded.slug, description=excluded.description, welcome_message=excluded.welcome_message, welcome_media_id=excluded.welcome_media_id, completion_message=excluded.completion_message, completion_media_id=excluded.completion_media_id, duplicate_message=excluded.duplicate_message, is_active=excluded.is_active, duplicate_setting=excluded.duplicate_setting, use_ai=excluded.use_ai, ai_prompt=excluded.ai_prompt, ai_wait_message=excluded.ai_wait_message, ai_wait_media_id=excluded.ai_wait_media_id, action_type=excluded.action_type, action_webhook_url=excluded.action_webhook_url, action_webhook_body=excluded.action_webhook_body, action_http_url=excluded.action_http_url, platforms=excluded.platforms";
+             $db->prepare($sql)->execute([
+                $data['id'], $data['bot_id'], $data['title'], $data['slug'], $data['description'], $data['welcome_message'], $data['welcome_media_id'], $data['completion_message'], $data['completion_media_id'], $data['duplicate_message'], $data['is_active'], $data['duplicate_setting'], $data['use_ai'], $data['ai_prompt'], $data['ai_wait_message'], $data['ai_wait_media_id'], $data['action_type'], $data['action_webhook_url'], $data['action_webhook_body'], $data['action_http_url'], $data['platforms'], $data['created_at']
+            ]);
+        } else {
+            $sql = "INSERT INTO events (id, bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=?";
+            $db->prepare($sql)->execute([
+                $data['id'], $data['bot_id'], $data['title'], $data['slug'], $data['description'], $data['welcome_message'], $data['welcome_media_id'], $data['completion_message'], $data['completion_media_id'], $data['duplicate_message'], $data['is_active'], $data['duplicate_setting'], $data['use_ai'], $data['ai_prompt'], $data['ai_wait_message'], $data['ai_wait_media_id'], $data['action_type'], $data['action_webhook_url'], $data['action_webhook_body'], $data['action_http_url'], $data['platforms'], $data['created_at'],
+                $data['title'], $data['slug'], $data['description'], $data['welcome_message'], $data['welcome_media_id'], $data['completion_message'], $data['completion_media_id'], $data['duplicate_message'], $data['is_active'], $data['duplicate_setting'], $data['use_ai'], $data['ai_prompt'], $data['ai_wait_message'], $data['ai_wait_media_id'], $data['action_type'], $data['action_webhook_url'], $data['action_webhook_body'], $data['action_http_url'], $data['platforms']
             ]);
         }
     }

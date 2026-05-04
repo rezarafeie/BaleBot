@@ -10,6 +10,9 @@ $total_users = 0; $total_events = 0; $total_regs = 0; $today_regs = 0; $recent =
 
 if ($db) {
     try {
+        require_once __DIR__ . '/../classes/SyncManager.php';
+        SyncManager::processQueue();
+
         $total_users = $db->prepare("SELECT COUNT(*) FROM bot_users WHERE bot_id = ?");
         $total_users->execute([$bot_id]);
         $total_users = $total_users->fetchColumn();

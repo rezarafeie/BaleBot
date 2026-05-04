@@ -123,6 +123,20 @@ class EventManager {
 
     public function createEvent($data) {
         $bot_id = $data['bot_id'] ?? ($_SESSION['selected_bot_id'] ?? 1);
+        
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $id = time();
+            $data['id'] = $id;
+            $data['bot_id'] = $bot_id;
+            $data['created_at'] = date('Y-m-d H:i:s');
+            $data['is_active'] = $data['is_active'] ? 1 : 0;
+            $data['fields'] = [];
+            LocalStore::getInstance()->save('events', $id, $data);
+            $this->syncCache($bot_id);
+            return $id;
+        }
+
         $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $bot_id,
@@ -155,6 +169,21 @@ class EventManager {
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
+
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $event = LocalStore::getInstance()->get('events', $id);
+            if ($event) {
+                $fields = $event['fields'] ?? [];
+                $event = array_merge($event, $data);
+                $event['fields'] = $fields;
+                $event['is_active'] = $event['is_active'] ? 1 : 0;
+                LocalStore::getInstance()->save('events', $id, $event);
+                $this->syncCache($bot_id);
+            }
+            return true;
+        }
+
         $sql = "UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=? WHERE id=?";
         $params = [
             $data['title'],
@@ -197,6 +226,14 @@ class EventManager {
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
+
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            LocalStore::getInstance()->delete('events', $id);
+            $this->syncCache($bot_id);
+            return true;
+        }
+
         $event = $this->getEvent($id, $bot_id);
         if (!$event) return false;
 
@@ -246,6 +283,21 @@ class EventManager {
     }
 
     public function addField($event_id, $data) {
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $event = LocalStore::getInstance()->get('events', $event_id);
+            if ($event) {
+                if (!isset($event['fields'])) $event['fields'] = [];
+                $fieldId = time() . rand(10, 99);
+                $data['id'] = $fieldId;
+                $data['event_id'] = $event_id;
+                $data['is_active'] = 1;
+                $event['fields'][] = $data;
+                LocalStore::getInstance()->save('events', $event_id, $event);
+                $this->syncCache($event['bot_id']);
+            }
+            return true;
+        }
         $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $res = $stmt->execute([
             $event_id,
@@ -270,6 +322,25 @@ class EventManager {
     }
 
     public function updateField($id, $data) {
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            // Find which event this field belongs to
+            $allEvents = LocalStore::getInstance()->getAll('events');
+            foreach ($allEvents as $event) {
+                if (isset($event['fields'])) {
+                    foreach ($event['fields'] as $key => $field) {
+                        if ($field['id'] == $id) {
+                            $event['fields'][$key] = array_merge($field, $data);
+                            $event['fields'][$key]['is_active'] = $data['is_active'] ? 1 : 0;
+                            LocalStore::getInstance()->save('events', $event['id'], $event);
+                            $this->syncCache($event['bot_id']);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
         $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, media_id=?, options_json=?, is_active=? WHERE id=?");
         $res = $stmt->execute([
             $data['label'],
@@ -310,6 +381,24 @@ class EventManager {
     }
 
     public function deleteField($id) {
+        if (!$this->db) {
+            require_once __DIR__ . '/LocalStore.php';
+            $allEvents = LocalStore::getInstance()->getAll('events');
+            foreach ($allEvents as $event) {
+                if (isset($event['fields'])) {
+                    foreach ($event['fields'] as $key => $field) {
+                        if ($field['id'] == $id) {
+                            unset($event['fields'][$key]);
+                            $event['fields'] = array_values($event['fields']);
+                            LocalStore::getInstance()->save('events', $event['id'], $event);
+                            $this->syncCache($event['bot_id']);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
         $field = $this->getEventField($id);
         $stmt = $this->db->prepare("DELETE FROM event_fields WHERE id = ?");
         $res = $stmt->execute([$id]);

@@ -17,7 +17,28 @@ class Auth {
 
     public function register($username, $password, $email = '') {
         if (!$this->db) {
-            return ['success' => false, 'message' => 'پایگاه داده در دسترس نیست. امکان ثبت‌نام وجود ندارد.'];
+            // Local fallback for registration
+            require_once __DIR__ . '/LocalStore.php';
+            $store = LocalStore::getInstance();
+            
+            // Check if user exists locally
+            $admins = $store->findAll('admins');
+            foreach ($admins as $admin) {
+                if ($admin['username'] === $username) {
+                    return ['success' => false, 'message' => 'نام کاربری قبلاً انتخاب شده است.'];
+                }
+            }
+            
+            $id = time(); // Simple local ID
+            $data = [
+                'id' => $id,
+                'username' => $username,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'email' => $email,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            $store->save('admins', $id, $data);
+            return ['success' => true];
         }
         $stmt = $this->db->prepare("SELECT id FROM admins WHERE username = ? OR (email = ? AND email != '')");
         $stmt->execute([$username, $email]);
@@ -34,7 +55,23 @@ class Auth {
     }
 
     public function login($username, $password) {
-        if (!$this->db) return false;
+        if (!$this->db) {
+            // Local fallback for login
+            require_once __DIR__ . '/LocalStore.php';
+            $store = LocalStore::getInstance();
+            
+            $admins = $store->findAll('admins');
+            foreach ($admins as $admin) {
+                if ($admin['username'] === $username) {
+                    if (password_verify($password, $admin['password_hash'])) {
+                        $_SESSION['admin_id'] = $admin['id'];
+                        $_SESSION['username'] = $admin['username'];
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
         $stmt = $this->db->prepare("SELECT id, username, password_hash FROM admins WHERE username = ?");
         $stmt->execute([$username]);
         $admin = $stmt->fetch();
