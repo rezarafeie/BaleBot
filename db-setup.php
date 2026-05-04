@@ -109,6 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error .= "DB Name: $dbName<br>";
             $error .= "DSN: $dsn_base<br>";
             
+            // Try to get server public IP
+            $serverIp = @file_get_contents('https://api.ipify.org') ?: 'Could not detect';
+            $error .= "Your Server Public IP: <span class='text-blue-400 font-bold'>$serverIp</span> (Add this to your DB Whitelist)<br>";
+            
             // Try to resolve host
             $ip = gethostbyname($host);
             if ($ip === $host) {
