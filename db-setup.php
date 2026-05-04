@@ -99,6 +99,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } catch (PDOException $e) {
             $error = 'خطا در اتصال یا اجرای عملیات: ' . $e->getMessage();
+            
+            // diagnostic info
+            $error .= "<br><br><div class='text-left font-mono text-[10px] bg-slate-900 text-slate-300 p-4 rounded-xl space-y-1'>";
+            $error .= "Attempted Connection Details:<br>";
+            $error .= "Host: $host<br>";
+            $error .= "Port: $port<br>";
+            $error .= "User: $user<br>";
+            $error .= "DB Name: $dbName<br>";
+            $error .= "DSN: $dsn_base<br>";
+            
+            // Try to resolve host
+            $ip = gethostbyname($host);
+            if ($ip === $host) {
+                $error .= "Host Resolution: Failed (Could not resolve hostname)<br>";
+            } else {
+                $error .= "Host Resolution: Success (IP: $ip)<br>";
+                
+                // Try a basic socket test to check if port is open
+                $fp = @fsockopen($host, (int)$port, $errno, $errstr, 2);
+                if (!$fp) {
+                    $error .= "Port Check ($port): Closed/Filtered ($errstr [$errno])<br>";
+                } else {
+                    $error .= "Port Check ($port): Open<br>";
+                    fclose($fp);
+                }
+            }
+            $error .= "</div>";
         }
     }
 }
