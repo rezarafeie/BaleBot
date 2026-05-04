@@ -11,9 +11,7 @@ if (file_exists('config.php')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نصب سیستم BotMan</title>
     <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
-    <style>
-        body { font-family: Tahoma, Arial, sans-serif; }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-[#f8fafc] text-[#1e293b] min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl border border-[#e2e8f0] shadow-sm max-w-lg w-full">

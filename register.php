@@ -34,10 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ثبت‌نام | BotMan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; }
         .hero-bg {
             background-image: 
                 radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),

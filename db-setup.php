@@ -110,8 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error .= "DSN: $dsn_base<br>";
             
             // Try to get server public IP
-            $serverIp = @file_get_contents('https://api.ipify.org') ?: 'Could not detect';
-            $error .= "Your Server Public IP: <span class='text-blue-400 font-bold'>$serverIp</span> (Add this to your DB Whitelist)<br>";
+            $serverIp = $_SERVER['SERVER_ADDR'] ?? 'Could not detect';
+            $cidr = ($serverIp !== 'Could not detect') ? $serverIp . '/32' : 'N/A';
+            $error .= "Your Server Public IP: <span class='text-blue-400 font-bold'>$serverIp</span><br>";
+            $error .= "Whitelist CIDR (ArvanCloud): <span class='text-amber-400 font-bold select-all'>$cidr</span> (Copy this to whitelist)<br>";
             
             // Try to resolve host
             $ip = gethostbyname($host);
@@ -140,11 +142,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تنظیمات پایگاه داده | BotMan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Vazirmatn', sans-serif; }
-    </style>
+    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex items-center justify-center p-6">
 

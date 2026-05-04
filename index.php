@@ -7,10 +7,9 @@ require_once __DIR__ . '/config.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BotMan | مدیریت هوشمند ربات‌ها</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; }
         @keyframes float {
             0% { transform: translateY(0px) rotate(3deg); }
             50% { transform: translateY(-20px) rotate(5deg); }

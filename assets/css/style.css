@@ -1,8 +1,12 @@
 /* assets/css/style.css */
+:root {
+    --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+}
+
 body {
     direction: rtl;
     text-align: right;
-    font-family: Tahoma, Arial, sans-serif;
+    font-family: var(--font-persian);
     color: #1e293b;
     background-color: #f8fafc;
 }
