@@ -38,7 +38,7 @@ class Auth {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             $store->save('admins', $id, $data);
-            return ['success' => true];
+            return ['success' => true, 'message' => 'ثبت‌نام با موفقیت انجام شد (حالت محلی).'];
         }
         $stmt = $this->db->prepare("SELECT id FROM admins WHERE username = ? OR (email = ? AND email != '')");
         $stmt->execute([$username, $email]);

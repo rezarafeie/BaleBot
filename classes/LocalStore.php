@@ -24,11 +24,11 @@ class LocalStore {
     public function save($collection, $id, $data) {
         $dir = $this->dataDir . '/' . $collection;
         if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
+            if (!@mkdir($dir, 0777, true)) return false;
         }
         $file = $dir . '/' . $id . '.json';
         $data['id'] = $id; // Ensure ID is in data
-        file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        @file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         
         // Also queue for sync if needed
         $this->queueSync('save', $collection, $data);
@@ -107,7 +107,7 @@ class LocalStore {
             'data' => $data,
             'timestamp' => time()
         ];
-        file_put_contents($this->queueFile, json_encode($queue, JSON_UNESCAPED_UNICODE));
+        @file_put_contents($this->queueFile, json_encode($queue, JSON_UNESCAPED_UNICODE));
     }
 
     public function getQueue() {

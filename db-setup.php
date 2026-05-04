@@ -20,16 +20,31 @@ $currentConfig = [
     'port' => '3306',
     'db' => 'botman_db',
     'user' => 'root',
-    'pass' => ''
+    'pass' => '',
+    'cf_account_id' => '',
+    'cf_database_id' => '',
+    'cf_api_token' => '',
+    'db_type' => 'mysql'
 ];
 
 if (file_exists($configFile)) {
     $content = file_get_contents($configFile);
-    if (preg_match("/define\('DB_HOST', '(.*?)'\);/", $content, $m)) $currentConfig['host'] = $m[1];
-    if (preg_match("/define\('DB_PORT', '(.*?)'\);/", $content, $m)) $currentConfig['port'] = $m[1];
-    if (preg_match("/define\('DB_NAME', '(.*?)'\);/", $content, $m)) $currentConfig['db'] = $m[1];
-    if (preg_match("/define\('DB_USER', '(.*?)'\);/", $content, $m)) $currentConfig['user'] = $m[1];
-    if (preg_match("/define\('DB_PASS', '(.*?)'\);/", $content, $m)) $currentConfig['pass'] = $m[1];
+    $keys = [
+        'host' => 'DB_HOST',
+        'port' => 'DB_PORT',
+        'db' => 'DB_NAME',
+        'user' => 'DB_USER',
+        'pass' => 'DB_PASS',
+        'cf_account_id' => 'CF_ACCOUNT_ID',
+        'cf_database_id' => 'CF_DATABASE_ID',
+        'cf_api_token' => 'CF_API_TOKEN',
+        'db_type' => 'DB_TYPE'
+    ];
+    foreach ($keys as $cfgKey => $constKey) {
+        if (preg_match("/define\('$constKey', (getenv\('$constKey'\) \?\: )?'(.*?)'\);/", $content, $m)) {
+            $currentConfig[$cfgKey] = $m[2];
+        }
+    }
 }
 
 // Handle Form Submission
@@ -78,16 +93,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update config.php content
                 if (file_exists($configFile)) {
                     $content = file_get_contents($configFile);
-                    $content = preg_replace("/define\('DB_TYPE', '.*?'\);/", "define('DB_TYPE', '$dbType');", $content);
-                    $content = preg_replace("/define\('DB_HOST', '.*?'\);/", "define('DB_HOST', '$host');", $content);
-                    $content = preg_replace("/define\('DB_PORT', '.*?'\);/", "define('DB_PORT', '$port');", $content);
-                    $content = preg_replace("/define\('DB_NAME', '.*?'\);/", "define('DB_NAME', '$dbName');", $content);
-                    $content = preg_replace("/define\('DB_USER', '.*?'\);/", "define('DB_USER', '$user');", $content);
-                    $content = preg_replace("/define\('DB_PASS', '.*?'\);/", "define('DB_PASS', '$pass');", $content);
+                    // Robust replacement for both old define('KEY', 'VAL') and new define('KEY', getenv('KEY') ?: 'VAL')
+                    $keys = [
+                        'DB_TYPE' => $dbType,
+                        'DB_HOST' => $host,
+                        'DB_PORT' => $port,
+                        'DB_NAME' => $dbName,
+                        'DB_USER' => $user,
+                        'DB_PASS' => $pass,
+                        'CF_ACCOUNT_ID' => $cfAccountId,
+                        'CF_DATABASE_ID' => $cfDatabaseId,
+                        'CF_API_TOKEN' => $cfApiToken
+                    ];
                     
-                    $content = preg_replace("/define\('CF_ACCOUNT_ID', '.*?'\);/", "define('CF_ACCOUNT_ID', '$cfAccountId');", $content);
-                    $content = preg_replace("/define\('CF_DATABASE_ID', '.*?'\);/", "define('CF_DATABASE_ID', '$cfDatabaseId');", $content);
-                    $content = preg_replace("/define\('CF_API_TOKEN', '.*?'\);/", "define('CF_API_TOKEN', '$cfApiToken');", $content);
+                    foreach ($keys as $key => $val) {
+                        // Match either old format or new getenv format
+                        $pattern = "/define\('$key', (getenv\('$key'\) \?\: )?'.*?'\);/";
+                        $replacement = "define('$key', getenv('$key') ?: '$val');";
+                        $content = preg_replace($pattern, $replacement, $content);
+                    }
                     
                     file_put_contents($configFile, $content);
                     $status = 'تنظیمات با موفقیت در فایل config.php ذخیره شد.';
@@ -250,8 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-group">
                         <label class="label">نوع پایگاه داده</label>
                         <select name="db_type" id="db_type" class="input" style="font-family: inherit;" onchange="toggleFields()">
-                            <option value="mysql">MySQL / MariaDB</option>
-                            <option value="d1">Cloudflare D1 (HTTP API)</option>
+                            <option value="mysql" <?= ($currentConfig['db_type'] === 'mysql') ? 'selected' : '' ?>>MySQL / MariaDB</option>
+                            <option value="d1" <?= ($currentConfig['db_type'] === 'd1') ? 'selected' : '' ?>>Cloudflare D1 (HTTP API)</option>
                         </select>
                     </div>
 
@@ -286,18 +310,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <!-- Cloudflare D1 Fields -->
-                    <div id="d1_fields" style="display: none;">
+                    <div id="d1_fields" style="display: <?= ($currentConfig['db_type'] === 'd1') ? 'block' : 'none' ?>;">
                         <div class="input-group">
                             <label class="label">Account ID</label>
-                            <input type="text" name="cf_account_id" value="<?= htmlspecialchars($_POST['cf_account_id'] ?? '') ?>" class="input" placeholder="e.g. 5e... (from CF Dashboard)">
+                            <input type="text" name="cf_account_id" value="<?= htmlspecialchars($_POST['cf_account_id'] ?? $currentConfig['cf_account_id']) ?>" class="input" placeholder="e.g. 5e... (from CF Dashboard)">
                         </div>
                         <div class="input-group">
                             <label class="label">Database ID</label>
-                            <input type="text" name="cf_database_id" value="<?= htmlspecialchars($_POST['cf_database_id'] ?? '1ef8dd3e-1f18-429c-b42c-dca29b965c8d') ?>" class="input">
+                            <input type="text" name="cf_database_id" value="<?= htmlspecialchars($_POST['cf_database_id'] ?? $currentConfig['cf_database_id']) ?>" class="input">
                         </div>
                         <div class="input-group">
                             <label class="label">API Token</label>
-                            <input type="password" name="cf_api_token" value="<?= htmlspecialchars($_POST['cf_api_token'] ?? '') ?>" class="input" placeholder="D1 Edit Permissions Token">
+                            <input type="password" name="cf_api_token" value="<?= htmlspecialchars($_POST['cf_api_token'] ?? $currentConfig['cf_api_token']) ?>" class="input" placeholder="D1 Edit Permissions Token">
                         </div>
                     </div>
 
