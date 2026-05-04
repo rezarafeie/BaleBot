@@ -43,7 +43,7 @@ function url($path = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پنل مدیریت ربات بله</title>
+    <title>BotMan | پنل مدیریت هوشمند</title>
     <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>

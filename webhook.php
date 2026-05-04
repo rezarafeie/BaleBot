@@ -2,15 +2,17 @@
 // webhook.php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/BaleBot.php';
+require_once __DIR__ . '/classes/TelegramBot.php';
+require_once __DIR__ . '/classes/RubikaBot.php';
 require_once __DIR__ . '/classes/EventManager.php';
 require_once __DIR__ . '/classes/RegistrationManager.php';
 require_once __DIR__ . '/classes/BotManager.php';
 require_once __DIR__ . '/classes/Logger.php';
 
-// Determine Bot ID
-// Check if variables are already set by a wrapper file
+// Determine Bot ID and Platform
 $bot_id = $bot_id ?? ($_GET['bot_id'] ?? null);
 $bot_user = $bot_user ?? ($_GET['bot_user'] ?? null);
+$requested_platform = $_GET['platform'] ?? 'bale';
 
 $botManager = new BotManager();
 
@@ -48,7 +50,16 @@ if (!$update) {
     exit;
 }
 
-$bot = new BaleBot($botData['token'], $bot_id);
+// Instantiate the correct bot class based on platform
+$platform = $requested_platform;
+if ($platform === 'telegram') {
+    $bot = new TelegramBot($botData['telegram_token'], $bot_id);
+} elseif ($platform === 'rubika') {
+    $bot = new RubikaBot($botData['rubika_token'], $bot_id);
+} else {
+    $bot = new BaleBot($botData['token'], $bot_id);
+}
+
 $eventManager = new EventManager();
 $regManager = new RegistrationManager();
 
@@ -58,10 +69,18 @@ $db = Database::getInstance()->getConnection();
 $eventCache = $eventManager->getCachedData($bot_id);
 
 try {
-    if (isset($update['message'])) {
-        handleMessage($update['message']);
-    } elseif (isset($update['callback_query'])) {
-        handleCallbackQuery($update['callback_query']);
+    if ($platform === 'rubika') {
+        // Rubika payload structure adaptation
+        if (isset($update['data']['message'])) {
+            handleMessage($update['data']['message']);
+        }
+    } else {
+        // Bale/Telegram payload
+        if (isset($update['message'])) {
+            handleMessage($update['message']);
+        } elseif (isset($update['callback_query'])) {
+            handleCallbackQuery($update['callback_query']);
+        }
     }
 } catch (Exception $e) {
     error_log("Webhook Error: " . $e->getMessage());
@@ -110,7 +129,7 @@ function handleMessage($msg) {
     $username = $msg['from']['username'] ?? null;
     
     // Log user
-    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id);
+    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id, $GLOBALS['platform']);
 
     $stateInfo = $regManager->getUserState($chat_id, $bot_id);
     $status = $stateInfo['status'] ?? 'idle';
@@ -420,7 +439,12 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
         }
     } elseif ($field['type'] === 'channel_membership' && !empty($field['options_json'])) {
         $channel = json_decode($field['options_json'], true)[0] ?? '';
-        $joinLink = strpos($channel, '@') === 0 ? "https://ble.ir/" . substr($channel, 1) : null;
+        $joinLink = null;
+        if (strpos($channel, '@') === 0) {
+            if ($GLOBALS['platform'] === 'telegram') $joinLink = "https://t.me/" . substr($channel, 1);
+            elseif ($GLOBALS['platform'] === 'rubika') $joinLink = "https://rubika.ir/" . substr($channel, 1);
+            else $joinLink = "https://ble.ir/" . substr($channel, 1);
+        }
         
         $buttons = [];
         if ($joinLink) {
@@ -518,7 +542,7 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         askStep($chat_id, $event_id, $step_index, $answers);
     } else {
         // Registration complete
-        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE), $bot_id);
+        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE), $bot_id, $GLOBALS['platform']);
         $regManager->clearState($chat_id, $bot_id);
         
         // Trigger completion actions if configured

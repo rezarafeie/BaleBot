@@ -99,7 +99,7 @@ class EventManager {
 
     public function createEvent($data) {
         $bot_id = $data['bot_id'] ?? ($_SESSION['selected_bot_id'] ?? 1);
-        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $bot_id,
             $data['title'],
@@ -119,7 +119,8 @@ class EventManager {
             $data['action_type'] ?? 'none',
             $data['action_webhook_url'] ?? '',
             $data['action_webhook_body'] ?? '',
-            $data['action_http_url'] ?? ''
+            $data['action_http_url'] ?? '',
+            isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]'
         ]);
         $id = $this->db->lastInsertId();
         $this->syncCache($bot_id);
@@ -127,7 +128,7 @@ class EventManager {
     }
 
     public function updateEvent($id, $data) {
-        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=? WHERE id=?");
         $res = $stmt->execute([
             $data['title'],
             $data['slug'],
@@ -147,6 +148,7 @@ class EventManager {
             $data['action_webhook_url'] ?? '',
             $data['action_webhook_body'] ?? '',
             $data['action_http_url'] ?? '',
+            isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]',
             $id
         ]);
         $event = $this->getEvent($id);

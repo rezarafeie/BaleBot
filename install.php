@@ -9,7 +9,7 @@ if (file_exists('config.php')) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نصب سیستم بات بله</title>
+    <title>نصب سیستم BotMan</title>
     <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
     <style>
         body { font-family: Tahoma, Arial, sans-serif; }
@@ -17,10 +17,10 @@ if (file_exists('config.php')) {
 </head>
 <body class="bg-[#f8fafc] text-[#1e293b] min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-xl border border-[#e2e8f0] shadow-sm max-w-lg w-full">
-        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
         </div>
-        <h2 class="text-2xl font-bold text-center mb-6">نصب و راه‌اندازی سیستم</h2>
+        <h2 class="text-2xl font-bold text-center mb-6">نصب و راه‌اندازی BotMan</h2>
         
         <div class="space-y-4">
             <div class="flex items-start bg-[#f8fafc] p-4 rounded-lg border border-[#f1f5f9]">

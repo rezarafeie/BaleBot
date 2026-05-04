@@ -28,16 +28,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود | مدیریت</title>
+    <title>ورود | BotMan</title>
     <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="bg-[#f8fafc] flex items-center justify-center h-screen">
     <div class="bg-white p-8 rounded-xl border border-[#e2e8f0] w-full max-w-sm">
         <div class="flex justify-center mb-6">
-            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">B</div>
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">B</div>
         </div>
-        <h2 class="text-xl font-bold mb-6 text-center text-[#1e293b]">ورود به پنل مدیریت</h2>
+        <h2 class="text-xl font-bold mb-6 text-center text-[#1e293b]">ورود به پنل BotMan</h2>
         <?php if ($error): ?>
             <div class="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm text-center border border-red-100"><?= $error ?></div>
         <?php endif; ?>

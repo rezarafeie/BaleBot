@@ -39,7 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'action_type' => $_POST['action_type'] ?? 'none',
         'action_webhook_url' => $_POST['action_webhook_url'] ?? '',
         'action_webhook_body' => $_POST['action_webhook_body'] ?? '',
-        'action_http_url' => $_POST['action_http_url'] ?? ''
+        'action_http_url' => $_POST['action_http_url'] ?? '',
+        'platforms' => $_POST['platforms'] ?? ['bale']
     ];
 
     if ($id) {
@@ -75,6 +76,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-8">
             <label class="block text-[13px] font-medium text-[#475569] mb-2">توضیحات داخلی</label>
             <textarea name="description" rows="2" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2.5 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors"><?= htmlspecialchars($event['description']) ?></textarea>
+        </div>
+
+        <div class="border-t border-[#f1f5f9] mb-6"></div>
+
+        <h3 class="text-base font-semibold text-[#1e293b] mb-5">تنظیمات انتشار</h3>
+        <div class="mb-8">
+            <label class="block text-[13px] font-medium text-[#475569] mb-3">پیام‌رسان‌های فعال برای این رویداد</label>
+            <div class="flex flex-wrap gap-6 p-4 bg-[#f8fafc] rounded-lg border border-[#e2e8f0]">
+                <?php 
+                $active_platforms = json_decode($event['platforms'] ?? '["bale"]', true) ?: ['bale'];
+                $available_platforms = [
+                    'bale' => 'بله',
+                    'telegram' => 'تلگرام',
+                    'rubika' => 'روبیکا'
+                ];
+                foreach ($available_platforms as $key => $label): ?>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="platforms[]" value="<?= $key ?>" <?= in_array($key, $active_platforms) ? 'checked' : '' ?> class="w-4 h-4 text-blue-600 bg-white border-[#e2e8f0] rounded focus:ring-blue-500">
+                    <span class="text-sm text-[#334155]"><?= $label ?></span>
+                </label>
+                <?php endforeach; ?>
+            </div>
+            <p class="text-[11px] text-[#64748b] mt-2">توجه: توکن هر پیام‌رسان باید در بخش مدیریت بات‌ها تنظیم شده باشد.</p>
         </div>
 
         <div class="border-t border-[#f1f5f9] mb-6"></div>

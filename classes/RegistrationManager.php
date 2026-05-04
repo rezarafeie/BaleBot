@@ -79,12 +79,12 @@ class RegistrationManager {
         return true;
     }
 
-    public function completeRegistration($chat_id, $event_id, $answers_json, $bot_id = null) {
+    public function completeRegistration($chat_id, $event_id, $answers_json, $bot_id = null, $platform = 'bale') {
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
-        $stmt = $this->db->prepare("INSERT INTO registrations (event_id, chat_id, bot_id, answers_json, status, created_at) VALUES (?, ?, ?, ?, 'completed', NOW())");
-        $stmt->execute([$event_id, $chat_id, $bot_id, $answers_json]);
+        $stmt = $this->db->prepare("INSERT INTO registrations (event_id, chat_id, bot_id, answers_json, status, platform, created_at) VALUES (?, ?, ?, ?, 'completed', ?, NOW())");
+        $stmt->execute([$event_id, $chat_id, $bot_id, $answers_json, $platform]);
         $reg_id = $this->db->lastInsertId();
 
         $answers = json_decode($answers_json, true) ?: [];
@@ -147,12 +147,12 @@ class RegistrationManager {
         return false;
     }
 
-    public function updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id = null) {
+    public function updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id = null, $platform = 'bale') {
         if ($bot_id === null && isset($_SESSION['selected_bot_id'])) {
             $bot_id = $_SESSION['selected_bot_id'];
         }
         // Cache to avoid frequent DB updates for same user session
-        $key = $bot_id ? "{$chat_id}_{$bot_id}" : $chat_id;
+        $key = $bot_id ? "{$chat_id}_{$bot_id}_{$platform}" : "{$chat_id}_{$platform}";
         $cachePath = dirname(__DIR__) . "/data/users/{$key}.json";
         if (file_exists($cachePath)) {
             $data = json_decode(file_get_contents($cachePath), true);
@@ -161,9 +161,9 @@ class RegistrationManager {
             }
         }
 
-        $stmt = $this->db->prepare("INSERT INTO bot_users (chat_id, bale_user_id, name, username, bot_id, first_interaction_at, last_interaction_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=?, last_interaction_at=NOW()");
+        $stmt = $this->db->prepare("INSERT INTO bot_users (chat_id, bale_user_id, name, username, bot_id, platform, first_interaction_at, last_interaction_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE name=COALESCE(?, name), username=?, last_interaction_at=NOW()");
         $res = $stmt->execute([
-            $chat_id, $bale_user_id, $name, $username, $bot_id,
+            $chat_id, $bale_user_id, $name, $username, $bot_id, $platform,
             $name, $username
         ]);
 

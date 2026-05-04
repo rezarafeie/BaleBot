@@ -5,7 +5,7 @@
                 <?= $currentBot ? mb_substr($currentBot['name'], 0, 1) : 'B' ?>
             </div>
             <h1 class="text-[16px] font-bold text-[#1e293b] truncate">
-                <?= $currentBot ? htmlspecialchars($currentBot['name']) : 'پنل مدیریت بله' ?>
+                <?= $currentBot ? htmlspecialchars($currentBot['name']) : 'مدیریت BotMan' ?>
             </h1>
         </div>
         <button onclick="toggleSidebar()" class="md:hidden text-gray-500 font-bold p-2">✕</button>

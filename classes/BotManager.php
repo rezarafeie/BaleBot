@@ -23,6 +23,17 @@ class BotManager {
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+        // Add platform-specific tokens to bots table
+        try { $this->db->exec("ALTER TABLE `bots` ADD `telegram_token` varchar(255) DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `bots` ADD `rubika_token` varchar(255) DEFAULT NULL"); } catch(PDOException $e) {}
+        
+        // Add platform column to various tables
+        try { $this->db->exec("ALTER TABLE `events` ADD `platforms` text DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `bot_users` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `user_states` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `registrations` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `broadcasts` ADD `platforms` text DEFAULT NULL"); } catch(PDOException $e) {}
+
         // Add bot_id to existing tables if not present
         try { $this->db->exec("ALTER TABLE `events` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `registration_answers` ADD `bot_id` INT DEFAULT 1"); } catch(PDOException $e) {}
@@ -128,27 +139,36 @@ class BotManager {
             @mkdir($botDir, 0777, true);
         }
         
-        $webhookFile = $botDir . '/webhook.php';
-        $pretty_username = '@' . $bot_username;
-        $content = "<?php
+        $platforms = ['bale', 'telegram', 'rubika'];
+        foreach ($platforms as $platform) {
+            $webhookFile = $botDir . "/webhook_{$platform}.php";
+            $pretty_username = '@' . $bot_username;
+            $content = "<?php
 /**
- * Bale Bot Webhook Handler
+ * {$platform} Bot Webhook Handler
  * Generated for: {$pretty_username}
  */
 
-// Pass the bot username to the core webhook logic
+// Pass context to the core webhook logic
 \$_GET['bot_user'] = '{$bot_username}';
+\$_GET['platform'] = '{$platform}';
 
 // Include the core webhook processing logic
 require_once realpath(__DIR__ . '/../../webhook.php');
 ";
-        // Always overwrite to ensure latest logic
-        file_put_contents($webhookFile, $content);
+            file_put_contents($webhookFile, $content);
+        }
+        
+        // Legacy support for bale if needed
+        $legacy = $botDir . '/webhook.php';
+        if (!file_exists($legacy)) {
+            copy($botDir . "/webhook_bale.php", $legacy);
+        }
     }
 
-    public function createBot($name, $username, $token) {
-        $stmt = $this->db->prepare("INSERT INTO bots (name, username, token) VALUES (?, ?, ?)");
-        $stmt->execute([$name, $username, $token]);
+    public function createBot($name, $username, $token, $telegram_token = null, $rubika_token = null) {
+        $stmt = $this->db->prepare("INSERT INTO bots (name, username, token, telegram_token, rubika_token) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token]);
         $id = $this->db->lastInsertId();
         if ($id) {
             $this->ensureWebhookFile($username);
@@ -161,9 +181,9 @@ require_once realpath(__DIR__ . '/../../webhook.php');
         return $id;
     }
 
-    public function updateBot($id, $name, $username, $token, $is_active) {
-        $stmt = $this->db->prepare("UPDATE bots SET name = ?, username = ?, token = ?, is_active = ? WHERE id = ?");
-        $res = $stmt->execute([$name, $username, $token, $is_active ? 1 : 0, $id]);
+    public function updateBot($id, $name, $username, $token, $telegram_token, $rubika_token, $is_active) {
+        $stmt = $this->db->prepare("UPDATE bots SET name = ?, username = ?, token = ?, telegram_token = ?, rubika_token = ?, is_active = ? WHERE id = ?");
+        $res = $stmt->execute([$name, $username, $token, $telegram_token, $rubika_token, $is_active ? 1 : 0, $id]);
         if ($res) {
             $this->ensureWebhookFile($username);
         }

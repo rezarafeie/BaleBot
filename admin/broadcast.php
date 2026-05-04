@@ -20,8 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_broadcast'])) {
     $target_event_id = $_POST['target_event_id'] ?: null;
     $message_text = $_POST['message_text'];
     $media_id = $_POST['media_id'] ?: null;
+    $platforms = $_POST['platforms'] ?? ['bale'];
 
-    $broadcast_id = $bm->createBroadcast($target_type, $target_event_id, $message_text, $media_id, $bot_id);
+    $broadcast_id = $bm->createBroadcast($target_type, $target_event_id, $message_text, $media_id, $bot_id, $platforms);
     // Process sync for simplicity (ideally this should be dispatched via cron for large lists to avoid timeout)
     $bm->processBroadcast($broadcast_id);
     
@@ -57,6 +58,24 @@ $history = $stmt->fetchAll();
                         <option value="all">همه کاربران بات</option>
                         <option value="event">ثبت‌نام کنندگان رویداد خاص</option>
                     </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-[#475569] mb-2">پیام‌رسان‌های هدف:</label>
+                    <div class="flex flex-wrap gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="platforms[]" value="bale" checked class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-xs text-gray-700">بله</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="platforms[]" value="telegram" checked class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-xs text-gray-700">تلگرام</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="platforms[]" value="rubika" checked class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-xs text-gray-700">روبیکا</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="mb-4" id="event_selector" style="display:none;">
