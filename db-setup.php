@@ -113,8 +113,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $content = preg_replace($pattern, $replacement, $content);
                     }
                     
-                    file_put_contents($configFile, $content);
-                    $status = 'تنظیمات با موفقیت در فایل config.php ذخیره شد.';
+                    if (@file_put_contents($configFile, $content)) {
+                        $status = 'تنظیمات با موفقیت در فایل config.php ذخیره شد.';
+                    } else {
+                        $error = 'خطا: سیستم فایل "فقط خواندنی" (Read-only) است. امکان تغییر config.php وجود ندارد.<br>لطفاً متغیرهای محیطی (Environment Variables) زیر را در پنل هاست خود تنظیم کنید:';
+                        $manual_env = [];
+                        foreach ($keys as $k => $v) {
+                            $manual_env[] = "<strong>$k</strong>: $v";
+                        }
+                        $error .= '<div style="background: #f8fafc; padding: 12px; margin-top: 8px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 12px; direction: ltr; text-align: left;">' . implode('<br>', $manual_env) . '</div>';
+                    }
                 } else {
                     $error = 'فایل config.php یافت نشد.';
                 }
@@ -204,9 +212,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تنظیمات پایگاه داده | BotMan</title>
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
     <style>
         :root {
-            --font-persian: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
+            --font-persian: "Vazirmatn", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;
         }
         body { 
             font-family: var(--font-persian); 

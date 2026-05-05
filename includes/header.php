@@ -66,11 +66,12 @@ function url($path = '') {
     <title>BotMan | پنل مدیریت هوشمند</title>
     <style>
         :root {
-            --font-persian: Tahoma, Arial, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+            --font-persian: "Vazirmatn", Tahoma, Arial, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
         }
         body { font-family: var(--font-persian); }
     </style>
-    <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/tailwindcss/2.2.9/tailwind.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="flex h-screen overflow-hidden">
