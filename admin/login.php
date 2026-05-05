@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ورود | BotMan</title>
     <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
+    <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
     <style>
         :root {
             --font-persian: "Vazirmatn", Tahoma, Arial, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;

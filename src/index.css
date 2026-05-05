@@ -1,8 +1,0 @@
-@import "https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css";
-@import "tailwindcss";
-@source "../**/*.php";
-
-@theme {
-  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
-}
-
