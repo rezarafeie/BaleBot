@@ -212,26 +212,23 @@ class BotManager {
         foreach ($platforms as $platform) {
             $webhookFile = $botDir . "/webhook_{$platform}.php";
             $pretty_username = '@' . $bot_username;
-            $content = "<?php
-/**
- * {$platform} Bot Webhook Handler
- * Generated for: {$pretty_username}
- */
-
-// Pass context to the core webhook logic
-\$_GET['bot_user'] = '{$bot_username}';
-\$_GET['platform'] = '{$platform}';
-
-// Include the core webhook processing logic
-if (file_exists(__DIR__ . '/../../webhook.php')) {
-    require_once __DIR__ . '/../../webhook.php';
-} else if (file_exists(dirname(dirname(__DIR__)) . '/webhook.php')) {
-    require_once dirname(dirname(__DIR__)) . '/webhook.php';
-} else {
-    // Ultimate fallback
-    require_once '../../webhook.php';
-}
-";
+            $content = "<?php\n" . 
+"/**\n" . 
+" * " . $platform . " Bot Webhook Handler\n" . 
+" * Generated for: @" . $bot_username . "\n" . 
+" */\n\n" . 
+"// Pass context to the core webhook logic\n" . 
+"\$_GET['bot_user'] = '" . $bot_username . "';\n" . 
+"\$_GET['platform'] = '" . $platform . "';\n\n" . 
+"// Include the core webhook processing logic\n" . 
+"if (file_exists(__DIR__ . '/../../webhook.php')) {\n" . 
+"    require_once __DIR__ . '/../../webhook.php';\n" . 
+"} else if (file_exists(dirname(dirname(__DIR__)) . '/webhook.php')) {\n" . 
+"    require_once dirname(dirname(__DIR__)) . '/webhook.php';\n" . 
+"} else {\n" . 
+"    // Ultimate fallback\n" . 
+"    require_once '../../webhook.php';\n" . 
+"}\n";
             file_put_contents($webhookFile, $content);
         }
         
