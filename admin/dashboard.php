@@ -209,6 +209,12 @@ $pendingSyncCount = count($syncQueue);
                     <?= !file_exists(__DIR__ . '/../data/webhook_hits_root.log') ? '<span class="text-[10px] block font-normal text-gray-400 mt-1">(هنوز داده‌ای از پیام‌رسان‌ها دریافت نشده)</span>' : '<span class="text-[10px] block font-normal text-red-400 mt-1">(داده دریافت شده - کلیک کنید)</span>' ?>
                 </a>
 
+                <?php if (file_exists(__DIR__ . '/../data/sync_debug.log')): ?>
+                <a href="view-log.php?file=sync_debug.log" class="w-full text-center bg-gray-100 text-gray-600 hover:bg-gray-200 py-2.5 rounded-lg text-[12px] font-medium transition-colors">
+                    📋 مشاهده لاگ فایلهای وبهوک (Sync Debug)
+                </a>
+                <?php endif; ?>
+
                 <a href="../webhook.php?test_reachability=1" target="_blank" class="w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
                     🌐 تست دستی اتصال (Manual Test)
                 </a>

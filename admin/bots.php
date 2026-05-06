@@ -138,10 +138,22 @@ require_once __DIR__ . '/../includes/header.php';
                 <td class="p-4">
                     <div class="flex flex-col gap-2 max-w-[220px]">
                         <?php foreach (['bale', 'telegram', 'rubika'] as $p): ?>
-                        <div class="flex items-center justify-between gap-2 bg-gray-50 px-2 py-1 rounded">
-                            <span class="text-[10px] text-gray-500 uppercase"><?= $p ?>:</span>
-                            <?php $prettyUrl = $baseUrl . "/bots/" . $bot['username'] . "/webhook_{$p}.php?secret=" . WEBHOOK_SECRET; ?>
-                            <button onclick="navigator.clipboard.writeText('<?= $prettyUrl ?>'); alert('کپی شد!')" class="text-[10px] text-blue-500 hover:underline truncate" title="<?= $prettyUrl ?>">کپی لینک</button>
+                        <div class="flex flex-col gap-1 bg-gray-50 px-2 py-1.5 rounded border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-500 uppercase font-bold"><?= $p ?>:</span>
+                                <?php 
+                                $localPath = dirname(__DIR__) . "/bots/" . ltrim($bot['username'], '@') . "/webhook_{$p}.php";
+                                $exists = file_exists($localPath);
+                                ?>
+                                <span class="text-[9px] <?= $exists ? 'text-green-500' : 'text-red-400' ?>">
+                                    <?= $exists ? 'فایل موجود' : 'فایل یافت نشد' ?>
+                                </span>
+                            </div>
+                            <?php $prettyUrl = $baseUrl . "/bots/" . ltrim($bot['username'], '@') . "/webhook_{$p}.php?secret=" . WEBHOOK_SECRET; ?>
+                            <div class="flex gap-1 overflow-hidden">
+                                <button onclick="navigator.clipboard.writeText('<?= $prettyUrl ?>'); alert('کپی شد!')" class="text-[9px] text-blue-500 hover:underline truncate flex-1 text-left" title="<?= $prettyUrl ?>">کپی لینک</button>
+                                <a href="<?= $prettyUrl ?>&test_reachability=1" target="_blank" class="text-[9px] text-gray-400 hover:text-blue-500">تست</a>
+                            </div>
                         </div>
                         <?php endforeach; ?>
                     </div>

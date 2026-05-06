@@ -196,16 +196,24 @@ class BotManager {
 
     public function ensureWebhookFile($bot_username) {
         $bot_username = ltrim($bot_username, '@');
+        $logFile = dirname(__DIR__) . '/data/sync_debug.log';
+        $timestamp = date('Y-m-d H:i:s');
         
         $baseDir = dirname(__DIR__);
         $botsDir = $baseDir . '/bots';
         if (!is_dir($botsDir)) {
-            @mkdir($botsDir, 0777, true);
+            if (!@mkdir($botsDir, 0777, true)) {
+                file_put_contents($logFile, "[$timestamp] FAILED to create botsDir: $botsDir\n", FILE_APPEND);
+            }
+            @chmod($botsDir, 0777);
         }
         
         $botDir = $botsDir . '/' . $bot_username;
         if (!is_dir($botDir)) {
-            @mkdir($botDir, 0777, true);
+            if (!@mkdir($botDir, 0777, true)) {
+                file_put_contents($logFile, "[$timestamp] FAILED to create botDir: $botDir\n", FILE_APPEND);
+            }
+            @chmod($botDir, 0777);
         }
         
         $platforms = ['bale', 'telegram', 'rubika'];
@@ -229,13 +237,21 @@ class BotManager {
 "    // Ultimate fallback\n" . 
 "    require_once '../../webhook.php';\n" . 
 "}\n";
-            file_put_contents($webhookFile, $content);
+            if (file_put_contents($webhookFile, $content) === false) {
+                file_put_contents($logFile, "[$timestamp] FAILED to write webhookFile: $webhookFile\n", FILE_APPEND);
+            } else {
+                @chmod($webhookFile, 0666);
+            }
         }
         
         // Legacy support for bale if needed
         $legacy = $botDir . '/webhook.php';
         if (!file_exists($legacy)) {
-            copy($botDir . "/webhook_bale.php", $legacy);
+            if (!@copy($botDir . "/webhook_bale.php", $legacy)) {
+                file_put_contents($logFile, "[$timestamp] FAILED to copy legacy file to $legacy\n", FILE_APPEND);
+            } else {
+                @chmod($legacy, 0666);
+            }
         }
     }
 
