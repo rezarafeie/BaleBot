@@ -176,17 +176,17 @@ class BotManager {
     }
 
     public function getBotByUsername($username) {
-        $username = ltrim($username, '@');
+        $usernameClean = ltrim($username, '@');
         if (!$this->db) {
             $cachePath = dirname(__DIR__) . '/data/bots_cache.json';
             if (file_exists($cachePath)) {
                 $cache = json_decode(file_get_contents($cachePath), true);
-                if (isset($cache['user_' . $username])) return $cache['user_' . $username];
+                if (isset($cache['user_' . $usernameClean])) return $cache['user_' . $usernameClean];
             }
             return null;
         }
-        $stmt = $this->db->prepare("SELECT * FROM bots WHERE username = ?");
-        $stmt->execute([$username]);
+        $stmt = $this->db->prepare("SELECT * FROM bots WHERE username = ? OR username = ?");
+        $stmt->execute([$usernameClean, '@' . $usernameClean]);
         $bot = $stmt->fetch();
         if ($bot) {
             $this->ensureWebhookFile($bot['username']);

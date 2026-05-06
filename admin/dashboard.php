@@ -165,6 +165,11 @@ $pendingSyncCount = count($syncQueue);
                 <h2 class="text-base font-semibold text-[#1e293b]">عملیات سریع</h2>
             </div>
             <div class="p-5 flex flex-col gap-4">
+                <?php if (file_exists(__DIR__ . '/../data/webhook_hits.log')): ?>
+                <a href="view-log.php?file=webhook_hits.log" class="w-full text-center bg-red-50 text-red-600 hover:bg-red-100 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
+                    🔍 بررسی لاگ خام ورودی (اضطراری)
+                </a>
+                <?php endif; ?>
                 <a href="event-edit.php" class="w-full text-center bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0] py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
                     + ایجاد رویداد جدید
                 </a>

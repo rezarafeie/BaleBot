@@ -25,6 +25,9 @@ $botManager = new BotManager();
 $input = file_get_contents('php://input');
 $update = json_decode($input, true);
 
+// Primitive emergency logger to detect ANY hit
+@file_put_contents(__DIR__ . '/data/webhook_hits.log', date('Y-m-d H:i:s') . " - Body: " . (trim($input) ? "Has content" : "Empty") . " - URI: " . $_SERVER['REQUEST_URI'] . " - IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . PHP_EOL, FILE_APPEND);
+
 if (trim($input)) {
     // Determine a temporary bot_id for logging if we don't have one yet
     $temp_bot_id = $_GET['bot_id'] ?? 1;
