@@ -4,17 +4,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Cloudflare D1 Support
-define('CF_ACCOUNT_ID', getenv('CF_ACCOUNT_ID') ?: ''); 
-define('CF_DATABASE_ID', getenv('CF_DATABASE_ID') ?: '1ef8dd3e-1f18-429c-b42c-dca29b965c8d');
-define('CF_API_TOKEN', getenv('CF_API_TOKEN') ?: '');
+// Database Configuration
 define('DB_TYPE', getenv('DB_TYPE') ?: 'mysql'); // mysql, d1
 define('DB_NAME', getenv('DB_NAME') ?: 'bale_bot_db');
-
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_PORT', getenv('DB_PORT') ?: '3306');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
+
+// Cloudflare D1 Support (Only if DB_TYPE is d1)
+define('CF_ACCOUNT_ID', getenv('CF_ACCOUNT_ID') ?: ''); 
+define('CF_DATABASE_ID', getenv('CF_DATABASE_ID') ?: '1ef8dd3e-1f18-429c-b42c-dca29b965c8d');
+define('CF_API_TOKEN', getenv('CF_API_TOKEN') ?: '');
 
 define('BOT_TOKEN', 'YOUR_BALE_BOT_TOKEN');
 define('WEBHOOK_SECRET', 'my_super_secret_string');

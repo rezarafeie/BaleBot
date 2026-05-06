@@ -41,8 +41,10 @@ if (file_exists($configFile)) {
         'db_type' => 'DB_TYPE'
     ];
     foreach ($keys as $cfgKey => $constKey) {
-        if (preg_match("/define\('$constKey', (getenv\('$constKey'\) \?\: )?'(.*?)'\);/", $content, $m)) {
-            $currentConfig[$cfgKey] = $m[2];
+        // Handle both single and double quotes, and optional getenv pattern
+        $pattern = "/define\s*\(\s*['\"]$constKey['\"]\s*,\s*(?:getenv\(['\"]$constKey['\"]\)\s*\?\:\s*)?['\"](.*?)['\"]\s*\)\s*;/i";
+        if (preg_match($pattern, $content, $m)) {
+            $currentConfig[$cfgKey] = $m[1];
         }
     }
 }
@@ -54,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // MySQL Params
     $host = $_POST['host'] ?? '';
-    $port = $_POST['port'] ?? '3306';
+    $port = $_POST['port'] ?? ''; // Remove default 3306 to allow blank
     $user = $_POST['user'] ?? '';
     $pass = $_POST['pass'] ?? '';
     $dbName = $_POST['db_name'] ?? '';
@@ -72,9 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
                 // Try to create DB if not exists
-                $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                $pdo->exec("USE `$dbName`;"); 
-                $pdo = new PDO("$dsn_base;dbname=$dbName;charset=utf8mb4", $user, $pass);
+                if ($dbName) {
+                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                    $pdo->exec("USE `$dbName`;"); 
+                    $pdo = new PDO("$dsn_base;dbname=$dbName;charset=utf8mb4", $user, $pass);
+                }
                 $conn = $pdo;
             } else {
                 // Cloudflare D1
@@ -93,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update config.php content
                 if (file_exists($configFile)) {
                     $content = file_get_contents($configFile);
-                    // Robust replacement for both old define('KEY', 'VAL') and new define('KEY', getenv('KEY') ?: 'VAL')
                     $keys = [
                         'DB_TYPE' => $dbType,
                         'DB_HOST' => $host,
@@ -107,10 +110,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
                     
                     foreach ($keys as $key => $val) {
-                        // Match either old format or new getenv format
-                        $pattern = "/define\('$key', (getenv\('$key'\) \?\: )?'.*?'\);/";
+                        // More robust pattern that handles missing defines or varied whitespace
+                        $pattern = "/define\s*\(\s*['\"]$key['\"]\s*,\s*(?:getenv\(['\"]$key['\"]\)\s*\?\:\s*)?['\"].*?['\"]\s*\)\s*;/i";
                         $replacement = "define('$key', getenv('$key') ?: '$val');";
-                        $content = preg_replace($pattern, $replacement, $content);
+                        
+                        if (preg_match($pattern, $content)) {
+                            $content = preg_replace($pattern, $replacement, $content);
+                        } else {
+                            // If not found, append before the require_once lines
+                            $content = preg_replace("/(require_once)/", "define('$key', getenv('$key') ?: '$val');\n$1", $content, 1);
+                        }
                     }
                     
                     if (@file_put_contents($configFile, $content)) {
@@ -213,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تنظیمات پایگاه داده | BotMan</title>
     <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
-    <link rel="stylesheet" href="assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/tailwindcss/2.2.19/tailwind.min.css">
     <style>
         :root {
             --font-persian: "Vazirmatn", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, Tahoma, sans-serif;

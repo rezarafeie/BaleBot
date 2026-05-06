@@ -71,7 +71,7 @@ function url($path = '') {
         body { font-family: var(--font-persian); }
     </style>
     <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
-    <link rel="stylesheet" href="../assets/css/tailwind-compiled.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/tailwindcss/2.2.19/tailwind.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="flex h-screen overflow-hidden">

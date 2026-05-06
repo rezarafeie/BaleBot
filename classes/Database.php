@@ -12,7 +12,11 @@ class Database {
         $type = defined('DB_TYPE') ? DB_TYPE : 'mysql';
 
         if ($type === 'mysql') {
-            if (!defined('DB_HOST')) return;
+            if (!defined('DB_HOST') || !defined('DB_NAME')) {
+                $this->isConnected = false;
+                $this->connectionError = "Database configuration (Host/Name) is missing.";
+                return;
+            }
             try {
                 $dsn = "mysql:host=" . DB_HOST;
                 if (defined('DB_PORT') && DB_PORT) {
