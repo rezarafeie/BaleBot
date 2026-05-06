@@ -219,8 +219,8 @@ class BotManager {
  */
 
 // Pass context to the core webhook logic
-$_GET['bot_user'] = '{$bot_username}';
-$_GET['platform'] = '{$platform}';
+\$_GET['bot_user'] = '{$bot_username}';
+\$_GET['platform'] = '{$platform}';
 
 // Include the core webhook processing logic
 if (file_exists(__DIR__ . '/../../webhook.php')) {

@@ -4,7 +4,10 @@
 $input = file_get_contents('php://input');
 
 // --- EMERGENCY ROOT LOGGER ---
-if (!is_dir(__DIR__ . '/data')) @mkdir(__DIR__ . '/data', 0777, true);
+if (!is_dir(__DIR__ . '/data')) {
+    @mkdir(__DIR__ . '/data', 0777, true);
+    @chmod(__DIR__ . '/data', 0777);
+}
 $logData = [
     'time' => date('Y-m-d H:i:s'),
     'uri' => $_SERVER['REQUEST_URI'],
