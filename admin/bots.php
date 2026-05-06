@@ -140,7 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php foreach (['bale', 'telegram', 'rubika'] as $p): ?>
                         <div class="flex items-center justify-between gap-2 bg-gray-50 px-2 py-1 rounded">
                             <span class="text-[10px] text-gray-500 uppercase"><?= $p ?>:</span>
-                            <?php $prettyUrl = $baseUrl . "/bots/" . $bot['username'] . "/webhook_{$p}.php"; ?>
+                            <?php $prettyUrl = $baseUrl . "/bots/" . $bot['username'] . "/webhook_{$p}.php?secret=" . WEBHOOK_SECRET; ?>
                             <button onclick="navigator.clipboard.writeText('<?= $prettyUrl ?>'); alert('کپی شد!')" class="text-[10px] text-blue-500 hover:underline truncate" title="<?= $prettyUrl ?>">کپی لینک</button>
                         </div>
                         <?php endforeach; ?>

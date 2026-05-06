@@ -204,18 +204,18 @@ $pendingSyncCount = count($syncQueue);
                 <h2 class="text-base font-semibold text-[#1e293b]">عملیات سریع</h2>
             </div>
         <div class="p-5 flex flex-col gap-4">
-                <a href="view-log.php?file=webhook_hits_root.log" class="w-full text-center <?= file_exists(__DIR__ . '/../data/webhook_hits_root.log') ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-400' ?> py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
-                    🔍 بررسی لاگ خام ورودی (ریشه)
-                    <?= !file_exists(__DIR__ . '/../data/webhook_hits_root.log') ? '<span class="text-[10px] block font-normal">(هنوز داده‌ای دریافت نشده)</span>' : '' ?>
+                <a href="view-log.php?file=webhook_hits_root.log" class="w-full text-center border-2 <?= file_exists(__DIR__ . '/../data/webhook_hits_root.log') ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-gray-50 text-gray-400 border-gray-100 italic' ?> py-3 rounded-xl text-[14px] font-bold transition-all shadow-sm">
+                    🔍 بررسی لاگ پیشرفته (Root Log)
+                    <?= !file_exists(__DIR__ . '/../data/webhook_hits_root.log') ? '<span class="text-[10px] block font-normal text-gray-400 mt-1">(هنوز داده‌ای از پیام‌رسان‌ها دریافت نشده)</span>' : '<span class="text-[10px] block font-normal text-red-400 mt-1">(داده دریافت شده - کلیک کنید)</span>' ?>
                 </a>
 
-                <a href="../webhook.php?test_reachability=1" target="_blank" class="w-full text-center bg-green-50 text-green-600 hover:bg-green-100 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
-                    🚀 تست اتصال و ایجاد لاگ (Test Reachability)
+                <a href="../webhook.php?test_reachability=1" target="_blank" class="w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
+                    🌐 تست دستی اتصال (Manual Test)
                 </a>
                 
                 <?php if (file_exists(__DIR__ . '/../data/webhook_hits.log')): ?>
-                <a href="view-log.php?file=webhook_hits.log" class="w-full text-center bg-red-50 text-red-600 hover:bg-red-100 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
-                    🔍 بررسی لاگ خام ورودی (اضطراری)
+                <a href="view-log.php?file=webhook_hits.log" class="w-full text-center bg-amber-50 text-amber-600 hover:bg-amber-100 py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
+                    🔍 بررسی لاگ اضطراری
                 </a>
                 <?php endif; ?>
                 <a href="event-edit.php" class="w-full text-center bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0] py-2.5 rounded-lg text-[13px] font-semibold transition-colors">
