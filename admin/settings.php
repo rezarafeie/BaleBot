@@ -190,8 +190,18 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
                 <div class="flex flex-col sm:flex-row gap-3">
                     <button type="submit" name="set_webhook" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-[13px] transition-colors text-center w-full sm:w-auto">SET Webhook</button>
                     <button type="submit" name="delete_webhook" class="bg-white hover:bg-gray-50 border border-[#e2e8f0] text-red-600 hover:text-red-700 font-medium py-2 px-4 rounded-lg text-[13px] transition-colors text-center w-full sm:w-auto">Delete Webhook</button>
+                    <button type="submit" name="check_webhook" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg text-[13px] transition-colors text-center w-full sm:w-auto">بررسی وضعیت وبهوک</button>
                 </div>
             </form>
+
+            <?php
+            if (isset($_POST['check_webhook'])) {
+                $info = $bot->getWebhookInfo();
+                echo '<div class="mt-4 p-3 bg-gray-50 rounded-lg text-[11px] font-mono whitespace-pre-wrap text-left" dir="ltr">';
+                echo json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                echo '</div>';
+            }
+            ?>
         </div>
     </div>
 

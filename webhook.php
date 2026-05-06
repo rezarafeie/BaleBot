@@ -14,6 +14,10 @@ $bot_id = $bot_id ?? ($_GET['bot_id'] ?? null);
 $bot_user = $bot_user ?? ($_GET['bot_user'] ?? null);
 $requested_platform = $_GET['platform'] ?? 'bale';
 
+// Ensure necessary directories exist
+if (!is_dir(__DIR__ . '/data')) @mkdir(__DIR__ . '/data', 0777, true);
+if (!is_dir(__DIR__ . '/bots')) @mkdir(__DIR__ . '/bots', 0777, true);
+
 // Attempt to sync if connected
 if (Database::getInstance()->isConnected()) {
     require_once __DIR__ . '/classes/SyncManager.php';

@@ -48,6 +48,12 @@ if (isset($_GET['test_token'])) {
     exit;
 }
 
+if (isset($_POST['sync_files'])) {
+    $botManager->init(); // This calls syncPhysicalBots which calls ensureWebhookFile for all
+    header("Location: bots.php?synced=1");
+    exit;
+}
+
 if (isset($_POST['add_bot'])) {
     $name = $_POST['name'];
     $token = $_POST['token'];
@@ -83,9 +89,16 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-[#1e293b]">مدیریت بات‌ها</h1>
-    <button onclick="document.getElementById('addBotModal').classList.remove('hidden')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-        + افزودن بات جدید
-    </button>
+    <div class="flex gap-2">
+        <form method="POST" class="inline">
+            <button type="submit" name="sync_files" class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                ⏳ بازنشانی فایل‌های وبهوک
+            </button>
+        </form>
+        <button onclick="document.getElementById('addBotModal').classList.remove('hidden')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+            + افزودن بات جدید
+        </button>
+    </div>
 </div>
 
 <div class="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">

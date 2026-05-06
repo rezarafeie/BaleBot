@@ -1,6 +1,19 @@
 <?php
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../classes/Database.php';
+require_once __DIR__ . '/../classes/BotManager.php';
+
+$botManager = new BotManager();
+$botsCount = count($botManager->getBots());
+$webhookFileCount = 0;
+if (is_dir(__DIR__ . '/../bots')) {
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__ . '/../bots'));
+    foreach ($it as $file) {
+        if ($file->isFile() && $file->getExtension() === 'php') $webhookFileCount++;
+    }
+}
+
+$baseUrlWarning = (defined('BASE_URL') && BASE_URL === 'https://yourdomain.com');
 
 $dbInstance = Database::getInstance();
 $db = $dbInstance->getConnection();
@@ -68,6 +81,32 @@ require_once __DIR__ . '/../classes/LocalStore.php';
 $syncQueue = LocalStore::getInstance()->getQueue();
 $pendingSyncCount = count($syncQueue);
 ?>
+
+<?php if ($baseUrlWarning): ?>
+<div class="bg-amber-50 border-r-4 border-amber-500 p-4 mb-6">
+    <div class="flex items-center gap-3">
+        <span class="text-amber-500 text-xl font-bold">⚠️</span>
+        <p class="text-amber-700 text-sm">
+            هشدار: آدرس دامنه (BASE_URL) در فایل config.php هنوز تنظیم نشده است. 
+            این موضوع ممکن است باعث اشکال در تنظیم خودکار وبهوک شود.
+        </p>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($botsCount > 0 && $webhookFileCount === 0): ?>
+<div class="bg-red-50 border-r-4 border-red-500 p-4 mb-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-red-500 text-xl font-bold">❌</span>
+            <p class="text-red-700 text-sm">
+                فایل‌های وبهوک بات‌ها ایجاد نشده‌اند! ربات‌های شما کار نخواهند کرد.
+            </p>
+        </div>
+        <a href="bots.php" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold">رفتن به مدیریت بات‌ها برای بازنشانی</a>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if ($pendingSyncCount > 0): ?>
 <div class="bg-blue-50 border-r-4 border-blue-500 p-4 mb-6">
