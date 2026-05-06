@@ -1,5 +1,15 @@
 <?php
 // webhook.php
+
+$input = file_get_contents('php://input');
+// Primitive emergency logger to detect ANY hit - MOVED TO TOP
+@file_put_contents(__DIR__ . '/webhook_hits_root.log', date('Y-m-d H:i:s') . " - Body: " . (trim($input) ? "Has content" : "Empty") . " - URI: " . $_SERVER['REQUEST_URI'] . " - IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . PHP_EOL, FILE_APPEND);
+@chmod(__DIR__ . '/webhook_hits_root.log', 0666);
+
+if (isset($_GET['test_reachability'])) {
+    exit("Webhook file is reachable. Time: " . date('Y-m-d H:i:s'));
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/classes/BaleBot.php';
 require_once __DIR__ . '/classes/TelegramBot.php';
@@ -14,10 +24,6 @@ $bot_id = $bot_id ?? ($_GET['bot_id'] ?? null);
 $bot_user = $bot_user ?? ($_GET['bot_user'] ?? null);
 $requested_platform = $_GET['platform'] ?? 'bale';
 
-// Ensure necessary directories exist
-if (!is_dir(__DIR__ . '/data')) @mkdir(__DIR__ . '/data', 0777, true);
-if (!is_dir(__DIR__ . '/bots')) @mkdir(__DIR__ . '/bots', 0777, true);
-
 // Attempt to sync if connected
 if (Database::getInstance()->isConnected()) {
     require_once __DIR__ . '/classes/SyncManager.php';
@@ -26,11 +32,7 @@ if (Database::getInstance()->isConnected()) {
 
 $botManager = new BotManager();
 
-$input = file_get_contents('php://input');
 $update = json_decode($input, true);
-
-// Primitive emergency logger to detect ANY hit
-@file_put_contents(__DIR__ . '/data/webhook_hits.log', date('Y-m-d H:i:s') . " - Body: " . (trim($input) ? "Has content" : "Empty") . " - URI: " . $_SERVER['REQUEST_URI'] . " - IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . PHP_EOL, FILE_APPEND);
 
 if (trim($input)) {
     // Determine a temporary bot_id for logging if we don't have one yet
