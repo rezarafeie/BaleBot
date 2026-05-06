@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "npx tailwindcss -i ./assets/css/input.css -o ./assets/css/tailwind.css"
+  },
   "dependencies": {
     "@tailwindcss/cli": "^4.2.4",
     "autoprefixer": "^10.5.0",

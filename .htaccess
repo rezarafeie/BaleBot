@@ -3,6 +3,8 @@
     RewriteEngine On
     RewriteBase /
 
+    DirectoryIndex index.php
+
     # Redirect index.html to index.php (optional but recommended for PHP hosts)
     RewriteRule ^index\.html$ /index.php [R=301,L]
 

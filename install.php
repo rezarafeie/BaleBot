@@ -10,7 +10,7 @@ if (file_exists('config.php')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نصب سیستم BotMan</title>
-    <link rel="stylesheet" href="assets/fonts/vazir/font-face.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
     <link rel="stylesheet" href="assets/css/tailwind.css">
     <style>
         :root {

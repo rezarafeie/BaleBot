@@ -70,7 +70,7 @@ function url($path = '') {
         }
         body { font-family: var(--font-persian); }
     </style>
-    <link rel="stylesheet" href="../assets/fonts/vazir/font-face.css">
+    <link rel="stylesheet" href="https://lib.arvancloud.ir/vazir-font/33.003/Vazirmatn-font-face.css">
     <link rel="stylesheet" href="../assets/css/tailwind.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>

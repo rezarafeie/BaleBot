@@ -32,6 +32,31 @@ if ($db) {
         $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'gapgpt_model', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
         $stmt->execute([$bot_id, $model, $model]);
         $msg = "تنظیمات GapGPT ذخیره شد.";
+    } elseif (isset($_POST['test_gapgpt'])) {
+        $key = $_POST['gapgpt_api_key'] ?? '';
+        $model = $_POST['gapgpt_model'] ?? 'gemini-2.5-flash-lite';
+        if (empty($key)) {
+            $msg = "⚠️ کلید API وارد نشده است.";
+        } else {
+            $result = GapGPT::call("سلام، یک تست کوتاه انجام بده و بگو آماده‌ای.", $key, $model);
+            if ($result) {
+                $msg = "✅ اتصال GapGPT موفقیت‌آمیز بود!";
+                $_SESSION['last_ai_log'] = [
+                    'time' => date('H:i:s'),
+                    'model' => $model,
+                    'response' => $result,
+                    'status' => 'Success'
+                ];
+            } else {
+                $msg = "❌ خطا در اتصال به GapGPT.";
+                $_SESSION['last_ai_log'] = [
+                    'time' => date('H:i:s'),
+                    'model' => $model,
+                    'response' => 'خطا در ارتباط با سرور یا کلید نامعتبر.',
+                    'status' => 'Failed'
+                ];
+            }
+        }
     } elseif (isset($_POST['save_event_selection'])) {
         $text = $_POST['event_selection_text'] ?? '';
         $stmt = $db->prepare("INSERT INTO settings (bot_id, setting_key, setting_value) VALUES (?, 'event_selection_text', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
@@ -50,6 +75,31 @@ if ($db) {
         LocalStore::getInstance()->save('settings', "gapgpt_key_{$bot_id}", ['value' => $_POST['gapgpt_api_key']]);
         LocalStore::getInstance()->save('settings', "gapgpt_model_{$bot_id}", ['value' => $_POST['gapgpt_model']]);
         $msg = "تنظیمات GapGPT ذخیره شد (محلی).";
+    } elseif (isset($_POST['test_gapgpt'])) {
+        $key = $_POST['gapgpt_api_key'] ?? '';
+        $model = $_POST['gapgpt_model'] ?? 'gemini-2.5-flash-lite';
+        if (empty($key)) {
+            $msg = "⚠️ کلید API وارد نشده است. (محلی)";
+        } else {
+            $result = GapGPT::call("سلام، یک تست کوتاه انجام بده و بگو آماده‌ای.", $key, $model);
+            if ($result) {
+                $msg = "✅ اتصال GapGPT موفقیت‌آمیز بود! (محلی)";
+                $_SESSION['last_ai_log'] = [
+                    'time' => date('H:i:s'),
+                    'model' => $model,
+                    'response' => $result,
+                    'status' => 'Success'
+                ];
+            } else {
+                $msg = "❌ خطا در اتصال به GapGPT. (محلی)";
+                $_SESSION['last_ai_log'] = [
+                    'time' => date('H:i:s'),
+                    'model' => $model,
+                    'response' => 'خطا در ارتباط با سرور (محلی)',
+                    'status' => 'Failed'
+                ];
+            }
+        }
     } elseif (isset($_POST['save_event_selection'])) {
         LocalStore::getInstance()->save('settings', "event_text_{$bot_id}", ['value' => $_POST['event_selection_text']]);
         $msg = "متن پیش‌فرض انتخاب رویداد ذخیره شد (محلی).";
@@ -62,8 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $auth->updatePassword($_POST['new_pass']);
             $msg = "رمز عبور مدیر تغییر کرد.";
         }
-    } elseif (isset($_POST['test_gapgpt'])) {
-        // ... same test logic ...
     }
 }
 
@@ -175,7 +223,8 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-[#475569] mb-2">مدل هوش مصنوعی</label>
                     <select name="gapgpt_model" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500">
-                        <option value="gemini-2.5-flash" <?= $current_gapgpt_model == 'gemini-2.5-flash' ? 'selected' : '' ?>>Gemini 2.5 Flash (جدید)</option>
+                        <option value="gapgpt-qwen-3.6" <?= $current_gapgpt_model == 'gapgpt-qwen-3.6' ? 'selected' : '' ?>>GapGPT Qwen 3.6 (پیشنهادی)</option>
+                        <option value="gemini-2.5-flash" <?= $current_gapgpt_model == 'gemini-2.5-flash' ? 'selected' : '' ?>>Gemini 2.5 Flash</option>
                         <option value="gemini-2.5-flash-lite" <?= $current_gapgpt_model == 'gemini-2.5-flash-lite' ? 'selected' : '' ?>>Gemini 2.5 Flash Lite</option>
                         <option value="gemini-2.0-flash-lite" <?= $current_gapgpt_model == 'gemini-2.0-flash-lite' ? 'selected' : '' ?>>Gemini 2.0 Flash Lite</option>
                         <option value="gpt-4o-mini" <?= $current_gapgpt_model == 'gpt-4o-mini' ? 'selected' : '' ?>>GPT-4o Mini</option>
@@ -186,6 +235,19 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
                     <button type="submit" name="save_gapgpt" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">ذخیره</button>
                     <button type="submit" name="test_gapgpt" class="bg-white hover:bg-gray-50 border border-[#e2e8f0] text-gray-700 font-medium py-2 px-6 rounded-lg text-[13px] transition-colors">تست اتصال 🔌</button>
                 </div>
+
+                <?php if (isset($_SESSION['last_ai_log'])): ?>
+                <div class="mt-6 p-4 bg-slate-900 rounded-xl font-mono text-[11px] text-slate-300 border border-slate-800">
+                    <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+                        <span class="text-blue-400 font-bold">LOG_AI_CONNECTION (<?= $_SESSION['last_ai_log']['time'] ?>)</span>
+                        <span class="<?= $_SESSION['last_ai_log']['status'] === 'Success' ? 'text-green-500' : 'text-red-500' ?>"><?= $_SESSION['last_ai_log']['status'] ?></span>
+                    </div>
+                    <div class="space-y-1 overflow-x-auto whitespace-pre-wrap">
+                        <div><span class="text-slate-500">Model:</span> <?= $_SESSION['last_ai_log']['model'] ?></div>
+                        <div><span class="text-slate-500">Response:</span> <?= htmlspecialchars($_SESSION['last_ai_log']['response']) ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
