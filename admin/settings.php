@@ -186,6 +186,7 @@ $guessedUrl = $protocol . $host . rtrim(dirname(dirname($_SERVER['PHP_SELF'])), 
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-[#475569] mb-2">آدرس فایل `webhook.php` سرور شما:</label>
                     <input type="url" name="webhook_url" value="<?= $current_webhook ?: $guessedUrl ?>" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 text-left font-mono" dir="ltr" required>
+                    <p class="text-[10px] text-gray-500 mt-1">توصیه: لینک‌های اختصاصی هر بات را در صفحه <a href="bots.php" class="text-blue-500">مدیریت بات‌ها</a> کپی و در تنظیمات وب‌هوک هر پیام‌رسان قرار دهید.</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <button type="submit" name="set_webhook" class="bg-[#2563eb] hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-[13px] transition-colors text-center w-full sm:w-auto">SET Webhook</button>

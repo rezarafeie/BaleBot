@@ -13,7 +13,7 @@ class BotManager {
         }
     }
 
-    private function init() {
+    public function init() {
         // Create bots table
         $this->db->exec("CREATE TABLE IF NOT EXISTS `bots` (
             `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -99,7 +99,7 @@ class BotManager {
         $this->syncPhysicalBots();
     }
 
-    private function syncPhysicalBots() {
+    public function syncPhysicalBots() {
         $botsData = $this->db->query("SELECT username FROM bots")->fetchAll();
         foreach ($botsData as $bot) {
             if ($bot['username']) {
@@ -219,11 +219,18 @@ class BotManager {
  */
 
 // Pass context to the core webhook logic
-\$_GET['bot_user'] = '{$bot_username}';
-\$_GET['platform'] = '{$platform}';
+$_GET['bot_user'] = '{$bot_username}';
+$_GET['platform'] = '{$platform}';
 
 // Include the core webhook processing logic
-require_once realpath(__DIR__ . '/../../webhook.php');
+if (file_exists(__DIR__ . '/../../webhook.php')) {
+    require_once __DIR__ . '/../../webhook.php';
+} else if (file_exists(dirname(dirname(__DIR__)) . '/webhook.php')) {
+    require_once dirname(dirname(__DIR__)) . '/webhook.php';
+} else {
+    // Ultimate fallback
+    require_once '../../webhook.php';
+}
 ";
             file_put_contents($webhookFile, $content);
         }

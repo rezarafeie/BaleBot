@@ -2,24 +2,27 @@
 require_once __DIR__ . '/../includes/header.php';
 
 $file = $_GET['file'] ?? '';
-$path = realpath(__DIR__ . '/../data/' . $file);
 
-// Security: only allow data/ or root directory
-$allowed_paths = [
-    realpath(__DIR__ . '/../data/'),
-    realpath(__DIR__ . '/../')
+// Try multiple path resolutions
+$paths_to_try = [
+    __DIR__ . '/../data/' . $file,
+    __DIR__ . '/../' . $file
 ];
 
-$is_allowed = false;
-foreach ($allowed_paths as $allowed) {
-    if ($path && strpos($path, $allowed) === 0) {
-        $is_allowed = true;
+$path = null;
+foreach ($paths_to_try as $p) {
+    if (file_exists($p)) {
+        $path = realpath($p);
         break;
     }
 }
 
-if (!$is_allowed || !file_exists($path)) {
-    echo "File not found or access denied.";
+// Security Check
+$base_root = realpath(__DIR__ . '/../');
+$is_allowed = ($path && strpos($path, $base_root) === 0);
+
+if (!$is_allowed || !$path || !file_exists($path)) {
+    echo "File not found or access denied. (Path: " . htmlspecialchars($file) . ")";
     exit;
 }
 

@@ -49,7 +49,7 @@ if (isset($_GET['test_token'])) {
 }
 
 if (isset($_POST['sync_files'])) {
-    $botManager->init(); // This calls syncPhysicalBots which calls ensureWebhookFile for all
+    $botManager->syncPhysicalBots(); 
     header("Location: bots.php?synced=1");
     exit;
 }

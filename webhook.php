@@ -4,17 +4,18 @@
 $input = file_get_contents('php://input');
 
 // --- EMERGENCY ROOT LOGGER ---
+if (!is_dir(__DIR__ . '/data')) @mkdir(__DIR__ . '/data', 0777, true);
 $logData = [
     'time' => date('Y-m-d H:i:s'),
     'uri' => $_SERVER['REQUEST_URI'],
     'method' => $_SERVER['REQUEST_METHOD'],
     'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-    'headers' => getallheaders(),
+    'headers' => function_exists('getallheaders') ? getallheaders() : [],
     'body_raw' => $input
 ];
 $logLine = json_encode($logData, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-@file_put_contents(__DIR__ . '/webhook_hits_root.log', $logLine, FILE_APPEND);
-@chmod(__DIR__ . '/webhook_hits_root.log', 0666);
+@file_put_contents(__DIR__ . '/data/webhook_hits_root.log', $logLine, FILE_APPEND);
+@chmod(__DIR__ . '/data/webhook_hits_root.log', 0666);
 // -----------------------------
 
 if (isset($_GET['test_reachability'])) {
