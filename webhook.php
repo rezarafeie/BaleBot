@@ -2,9 +2,20 @@
 // webhook.php
 
 $input = file_get_contents('php://input');
-// Primitive emergency logger to detect ANY hit - MOVED TO TOP
-@file_put_contents(__DIR__ . '/webhook_hits_root.log', date('Y-m-d H:i:s') . " - Body: " . (trim($input) ? "Has content" : "Empty") . " - URI: " . $_SERVER['REQUEST_URI'] . " - IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . PHP_EOL, FILE_APPEND);
+
+// --- EMERGENCY ROOT LOGGER ---
+$logData = [
+    'time' => date('Y-m-d H:i:s'),
+    'uri' => $_SERVER['REQUEST_URI'],
+    'method' => $_SERVER['REQUEST_METHOD'],
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    'headers' => getallheaders(),
+    'body_raw' => $input
+];
+$logLine = json_encode($logData, JSON_UNESCAPED_UNICODE) . PHP_EOL;
+@file_put_contents(__DIR__ . '/webhook_hits_root.log', $logLine, FILE_APPEND);
 @chmod(__DIR__ . '/webhook_hits_root.log', 0666);
+// -----------------------------
 
 if (isset($_GET['test_reachability'])) {
     exit("Webhook file is reachable. Time: " . date('Y-m-d H:i:s'));

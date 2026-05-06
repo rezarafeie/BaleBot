@@ -20,7 +20,7 @@ define('CF_API_TOKEN', getenv('CF_API_TOKEN') ?: '');
 define('BOT_TOKEN', 'YOUR_BALE_BOT_TOKEN');
 define('WEBHOOK_SECRET', 'my_super_secret_string');
 
-define('BASE_URL', 'https://yourdomain.com'); // Without trailing slash
+define('BASE_URL', 'https://bot.rafiei.co'); // Without trailing slash
 
 // Set timezone
 date_default_timezone_set('Asia/Tehran');
