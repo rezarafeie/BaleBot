@@ -9,6 +9,7 @@ class EventManager {
         $dbInstance = Database::getInstance();
         if ($dbInstance->isConnected()) {
             $this->db = $dbInstance->getConnection();
+            try { $this->db->exec("ALTER TABLE `events` ADD `next_event_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
             try { $this->db->exec("ALTER TABLE `events` ADD `use_ai` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
             try { $this->db->exec("ALTER TABLE `events` ADD `ai_prompt` TEXT NULL"); } catch(PDOException $e) {}
             try { $this->db->exec("ALTER TABLE `events` ADD `ai_wait_message` TEXT NULL"); } catch(PDOException $e) {}
@@ -17,6 +18,7 @@ class EventManager {
             try { $this->db->exec("ALTER TABLE `events` ADD `action_webhook_body` TEXT NULL"); } catch(PDOException $e) {}
             try { $this->db->exec("ALTER TABLE `events` ADD `action_http_url` TEXT NULL"); } catch(PDOException $e) {}
             try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_active` TINYINT(1) DEFAULT 1"); } catch(PDOException $e) {}
+            try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_ai_generated` TINYINT(1) DEFAULT 0"); } catch(PDOException $e) {}
         }
     }
 
@@ -137,7 +139,7 @@ class EventManager {
             return $id;
         }
 
-        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $this->db->prepare("INSERT INTO events (bot_id, title, slug, description, welcome_message, welcome_media_id, completion_message, completion_media_id, duplicate_message, is_active, duplicate_setting, use_ai, ai_prompt, ai_wait_message, ai_wait_media_id, action_type, action_webhook_url, action_webhook_body, action_http_url, platforms, next_event_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $bot_id,
             $data['title'],
@@ -158,7 +160,8 @@ class EventManager {
             $data['action_webhook_url'] ?? '',
             $data['action_webhook_body'] ?? '',
             $data['action_http_url'] ?? '',
-            isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]'
+            isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]',
+            !empty($data['next_event_id']) ? $data['next_event_id'] : null
         ]);
         $id = $this->db->lastInsertId();
         $this->syncCache($bot_id);
@@ -184,7 +187,7 @@ class EventManager {
             return true;
         }
 
-        $sql = "UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=? WHERE id=?";
+        $sql = "UPDATE events SET title=?, slug=?, description=?, welcome_message=?, welcome_media_id=?, completion_message=?, completion_media_id=?, duplicate_message=?, is_active=?, duplicate_setting=?, use_ai=?, ai_prompt=?, ai_wait_message=?, ai_wait_media_id=?, action_type=?, action_webhook_url=?, action_webhook_body=?, action_http_url=?, platforms=?, next_event_id=? WHERE id=?";
         $params = [
             $data['title'],
             $data['slug'],
@@ -205,6 +208,7 @@ class EventManager {
             $data['action_webhook_body'] ?? '',
             $data['action_http_url'] ?? '',
             isset($data['platforms']) ? (is_array($data['platforms']) ? json_encode($data['platforms']) : $data['platforms']) : '["bale"]',
+            !empty($data['next_event_id']) ? $data['next_event_id'] : null,
             $id
         ];
 
@@ -292,13 +296,14 @@ class EventManager {
                 $data['id'] = $fieldId;
                 $data['event_id'] = $event_id;
                 $data['is_active'] = 1;
+                $data['is_ai_generated'] = $data['is_ai_generated'] ? 1 : 0;
                 $event['fields'][] = $data;
                 LocalStore::getInstance()->save('events', $event_id, $event);
                 $this->syncCache($event['bot_id']);
             }
             return true;
         }
-        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO event_fields (event_id, label, field_key, type, is_required, sort_order, validation_rule, help_text, error_message, media_path, media_id, options_json, is_active, is_ai_generated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $res = $stmt->execute([
             $event_id,
             $data['label'],
@@ -312,7 +317,8 @@ class EventManager {
             $data['media_path'],
             $data['media_id'] ?? null,
             $data['options_json'],
-            1
+            1,
+            $data['is_ai_generated'] ? 1 : 0
         ]);
         $event = $this->getEvent($event_id);
         if ($event) {
@@ -332,6 +338,7 @@ class EventManager {
                         if ($field['id'] == $id) {
                             $event['fields'][$key] = array_merge($field, $data);
                             $event['fields'][$key]['is_active'] = $data['is_active'] ? 1 : 0;
+                            $event['fields'][$key]['is_ai_generated'] = $data['is_ai_generated'] ? 1 : 0;
                             LocalStore::getInstance()->save('events', $event['id'], $event);
                             $this->syncCache($event['bot_id']);
                             return true;
@@ -341,7 +348,7 @@ class EventManager {
             }
             return false;
         }
-        $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, media_id=?, options_json=?, is_active=? WHERE id=?");
+        $stmt = $this->db->prepare("UPDATE event_fields SET label=?, field_key=?, type=?, is_required=?, sort_order=?, validation_rule=?, help_text=?, error_message=?, media_path=?, media_id=?, options_json=?, is_active=?, is_ai_generated=? WHERE id=?");
         $res = $stmt->execute([
             $data['label'],
             $data['field_key'],
@@ -355,6 +362,7 @@ class EventManager {
             $data['media_id'] ?? null,
             $data['options_json'],
             $data['is_active'] ? 1 : 0,
+            $data['is_ai_generated'] ? 1 : 0,
             $id
         ]);
         $field = $this->getEventField($id);

@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'type' => $_POST['type'],
             'is_required' => isset($_POST['is_required']) ? 1 : 0,
             'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'is_ai_generated' => isset($_POST['is_ai_generated']) ? 1 : 0,
             'sort_order' => $_POST['sort_order'],
             'validation_rule' => '', // simplified
             'help_text' => $_POST['help_text'],
@@ -93,6 +94,7 @@ $fields = $em->getEventFields($event_id);
                         <label class="block text-sm font-medium text-[#475569] mb-2">نوع فیلد</label>
                         <select name="type" id="field_type" class="w-full border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm text-[#1e293b] focus:outline-none focus:border-blue-500 bg-[#f8fafc] focus:bg-white transition-colors">
                             <option value="text" <?= ($editing_field['type']??'') === 'text' ? 'selected' : '' ?>>متن کوتاه</option>
+                            <option value="message" <?= ($editing_field['type']??'') === 'message' ? 'selected' : '' ?>>پیام نمایشی (ساده - بدون دریافت پاسخ)</option>
                             <option value="dropdown" <?= ($editing_field['type']??'') === 'dropdown' ? 'selected' : '' ?>>لیست کشویی (دکمه‌های شیشه‌ای)</option>
                             <option value="number" <?= ($editing_field['type']??'') === 'number' ? 'selected' : '' ?>>عدد</option>
                             <option value="contact" <?= ($editing_field['type']??'') === 'contact' ? 'selected' : '' ?>>دریافت شماره تماس (دکمه شیشه‌ای بله)</option>
@@ -121,6 +123,7 @@ $fields = $em->getEventFields($event_id);
                         const container = document.getElementById('options_text_container');
                         const label = document.getElementById('options_label');
                         const hint = document.getElementById('options_hint');
+                        const aiOption = document.getElementById('ai_option_container');
                         
                         if (type === 'dropdown') {
                             container.classList.remove('hidden');
@@ -133,10 +136,24 @@ $fields = $em->getEventFields($event_id);
                         } else {
                             container.classList.add('hidden');
                         }
+
+                        if (type === 'message') {
+                            aiOption.classList.remove('hidden');
+                        } else {
+                            aiOption.classList.add('hidden');
+                        }
                     }
                     document.getElementById('field_type').addEventListener('change', updateOptionsDisplay);
                     updateOptionsDisplay();
                     </script>
+
+                    <div class="mb-4" id="ai_option_container">
+                        <div class="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                             <input type="checkbox" name="is_ai_generated" id="is_ai_generated" <?= (!empty($editing_field['is_ai_generated'])) ? 'checked' : '' ?> class="w-4 h-4 text-blue-600 bg-white border-blue-200 rounded focus:ring-blue-500 focus:ring-2">
+                             <label for="is_ai_generated" class="mr-2 text-xs font-semibold text-blue-800 cursor-pointer">پیام توسط هوش مصنوعی تولید شود ✨</label>
+                        </div>
+                        <p class="text-[10px] text-blue-600 mt-1 mr-1">در صورت فعال بودن، متن سوال بصورت پرامپت به هوش مصنوعی ارسال می‌شود.</p>
+                    </div>
 
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-[#475569] mb-2">عنوان (نمایش در فرم)</label>

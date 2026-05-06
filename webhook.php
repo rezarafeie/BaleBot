@@ -22,6 +22,20 @@ if (Database::getInstance()->isConnected()) {
 
 $botManager = new BotManager();
 
+$input = file_get_contents('php://input');
+$update = json_decode($input, true);
+
+if (trim($input)) {
+    // Determine a temporary bot_id for logging if we don't have one yet
+    $temp_bot_id = $_GET['bot_id'] ?? 1;
+    Logger::log('webhook_raw', 'Raw hit', $update ?: ['raw' => $input], $temp_bot_id);
+}
+
+// Ensure bots directory exists for those who still want physical files
+if (!is_dir(__DIR__ . '/bots')) {
+    @mkdir(__DIR__ . '/bots', 0777, true);
+}
+
 if ($bot_id) {
     $botData = $botManager->getBot($bot_id);
 } elseif ($bot_user) {
@@ -31,13 +45,17 @@ if ($bot_id) {
 }
 
 if (!$botData) {
+    // If it's a GET request (potentially a verification), maybe don't 404 immediately
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        exit("Webhook is active. Use /bots/username/webhook_platform.php for your bot.");
+    }
     http_response_code(404);
     exit("Bot not found");
 }
 
-$bot_id = $botData['id']; // Update global bot_id from found data
+$bot_id = $botData['id']; 
 
-// Security check
+// Security check (weak by default for compatibility as discussed)
 if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
     http_response_code(403);
     exit("Forbidden");
@@ -45,11 +63,9 @@ if (isset($_GET['secret']) && $_GET['secret'] !== WEBHOOK_SECRET) {
 
 require_once __DIR__ . '/classes/GapGPT.php';
 
-$input = file_get_contents('php://input');
-if (trim($input)) {
-    Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', json_decode($input, true) ?: ['raw' => $input], $bot_id);
+if ($update && $botData) {
+     Logger::log('webhook', 'Incoming webhook [' . $botData['name'] . ']', $update, $bot_id);
 }
-$update = json_decode($input, true);
 
 if (!$update) {
     http_response_code(200);
@@ -133,7 +149,7 @@ function sendMediaOrMessage($chat_id, $text, $media_id = null) {
 }
 
 function handleMessage($msg) {
-    global $bot, $eventManager, $regManager, $db, $eventCache, $bot_id;
+    global $bot, $eventManager, $regManager, $db, $eventCache, $bot_id, $platform;
 
     $chat_id = $msg['chat']['id'] ?? null;
     if (!$chat_id) return;
@@ -143,7 +159,7 @@ function handleMessage($msg) {
     $username = $msg['from']['username'] ?? null;
     
     // Log user
-    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id, $GLOBALS['platform']);
+    $regManager->updateBotUser($chat_id, $bale_user_id, $name, $username, $bot_id, $platform);
 
     $stateInfo = $regManager->getUserState($chat_id, $bot_id);
     $status = $stateInfo['status'] ?? 'idle';
@@ -195,7 +211,7 @@ function handleMessage($msg) {
 }
 
 function handleCallbackQuery($cq) {
-    global $bot, $eventManager, $regManager, $eventCache, $bot_id;
+    global $bot, $eventManager, $regManager, $eventCache, $bot_id, $platform;
 
     $chat_id = $cq['message']['chat']['id'] ?? null;
     $data = $cq['data'] ?? '';
@@ -417,6 +433,55 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
 
     $field = $fields[$step_index];
     
+    // Handle Simple Message Type (Non-blocking)
+    if ($field['type'] === 'message') {
+        $msgText = $field['help_text'] ?: $field['label'];
+        $msgText = replacePlaceholders($msgText, $answers);
+
+        // AI Generation if active for this message block
+        if (!empty($field['is_ai_generated'])) {
+            global $db, $bot_id;
+            $apiKey = "";
+            $model = 'gemini-2.5-flash-lite';
+            if ($db) {
+                try {
+                    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_api_key' AND bot_id = ?");
+                    $stmt->execute([$bot_id]);
+                    $apiKey = $stmt->fetchColumn();
+                    $stmt = $db->prepare("SELECT setting_value FROM settings WHERE setting_key = 'gapgpt_model' AND bot_id = ?");
+                    $stmt->execute([$bot_id]);
+                    $model = $stmt->fetchColumn() ?: 'gemini-2.5-flash-lite';
+                } catch (Exception $e) {}
+            }
+
+            if ($apiKey) {
+                $aiResponse = GapGPT::call($msgText, $apiKey, $model);
+                if ($aiResponse) $msgText = $aiResponse;
+            }
+        }
+
+        if (!empty($field['media_id'])) {
+            sendMedia($chat_id, $field['media_id'], $msgText, ['remove_keyboard' => true]);
+        } else {
+            $bot->sendMessage($chat_id, $msgText, ['remove_keyboard' => true]);
+        }
+
+        // Advance state silently
+        $answers[$field['field_key']] = 'Displayed';
+        $next_index = $step_index + 1;
+        global $regManager, $bot_id;
+        $regManager->setState($chat_id, $event_id, $next_index, json_encode($answers, JSON_UNESCAPED_UNICODE), 'registering', $bot_id);
+        
+        if ($next_index < count($fields)) {
+            askStep($chat_id, $event_id, $next_index, $answers);
+        } else {
+            // It was the last step, but it was just a message. Trigger completion.
+            $reg_data = ['text' => 'Message Displayed', 'is_skipped_message' => true];
+            processRegistrationStep($chat_id, $reg_data, $event_id, $step_index, $answers);
+        }
+        return;
+    }
+
     // Persistent Channel Verification Check
     if ($field['type'] === 'channel_membership') {
         $channel = json_decode($field['options_json'], true)[0] ?? '';
@@ -494,7 +559,7 @@ function askStep($chat_id, $event_id, $step_index, $answers = []) {
 }
 
 function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answers) {
-    global $bot, $eventManager, $regManager, $eventCache, $bot_id;
+    global $bot, $eventManager, $regManager, $eventCache, $bot_id, $platform;
     $event = $eventCache[$event_id] ?? $eventManager->getEvent($event_id);
     $fields = $event['fields'] ?? $eventManager->getEventFields($event_id, true);
     
@@ -537,6 +602,11 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         $value = $msg['text'] ?? null;
     }
 
+    // Ignore validation for skipped message blocks
+    if (isset($msg['is_skipped_message']) && $msg['is_skipped_message']) {
+        $value = 'Displayed';
+    }
+
     if ($field['is_required'] && empty($value)) {
         if ($field['type'] === 'channel_membership') {
             $err = $field['error_message'] ?: "شما هنوز عضو کانال نشده‌اید. لطفاً ابتدا از طریق دکمه زیر عضو شوید و سپس روی 'عضو شدم' بزنید.";
@@ -572,7 +642,7 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
         askStep($chat_id, $event_id, $step_index, $answers);
     } else {
         // Registration complete
-        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE), $bot_id, $GLOBALS['platform']);
+        $regManager->completeRegistration($chat_id, $event_id, json_encode($answers, JSON_UNESCAPED_UNICODE), $bot_id, $platform);
         $regManager->clearState($chat_id, $bot_id);
         
         // Trigger completion actions if configured
@@ -634,6 +704,15 @@ function processRegistrationStep($chat_id, $msg, $event_id, $step_index, &$answe
                 sendMedia($chat_id, $event['completion_media_id'], $doneMsg, ['remove_keyboard' => true]);
             } else {
                 $bot->sendMessage($chat_id, $doneMsg, ['remove_keyboard' => true]);
+            }
+        }
+
+        // Handle Seamless Transition to Next Event
+        if (!empty($event['next_event_id'])) {
+            $nextEvent = $eventCache[$event['next_event_id']] ?? $eventManager->getEvent($event['next_event_id']);
+            if ($nextEvent && $nextEvent['is_active']) {
+                // Give a tiny delay or just start
+                startEvent($chat_id, $nextEvent);
             }
         }
     }

@@ -63,7 +63,7 @@ class Logger {
         $params = [];
         $where = [];
 
-        if ($bot_id) {
+        if ($bot_id && $bot_id !== 'all') {
             $where[] = "bot_id = ?";
             $params[] = $bot_id;
         }
@@ -99,7 +99,7 @@ class Logger {
         $params = [];
         $where = [];
 
-        if ($bot_id) {
+        if ($bot_id && $bot_id !== 'all') {
             $where[] = "bot_id = ?";
             $params[] = $bot_id;
         }

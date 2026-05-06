@@ -8,25 +8,30 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 50;
 $offset = ($page - 1) * $limit;
 $filter_type = !empty($_GET['type']) ? $_GET['type'] : null;
+$filter_bot = isset($_GET['bot_filter']) ? $_GET['bot_filter'] : null;
 
-$logs = $logger->getLogs($limit, $offset, $filter_type);
-$total_logs = $logger->countLogs($filter_type);
+$logs = $logger->getLogs($limit, $offset, $filter_type, $filter_bot);
+$total_logs = $logger->countLogs($filter_type, $filter_bot);
 $total_pages = ceil($total_logs / $limit);
 
-$types = ['webhook', 'api', 'gapgpt', 'auth', 'database', 'system']; // Common log types
+$types = ['webhook', 'webhook_raw', 'api', 'gapgpt', 'auth', 'database', 'system']; // Common log types
 ?>
 
-<div class="flex justify-between items-center mb-6">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
     <h1 class="text-2xl font-bold text-[#1e293b]">لاگ‌های سیستم</h1>
     
-    <form method="GET" class="flex gap-2">
+    <form method="GET" class="flex flex-wrap gap-2">
+        <select name="bot_filter" class="border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-[#f8fafc]">
+            <option value="">بات فعلی</option>
+            <option value="all" <?= $filter_bot === 'all' ? 'selected' : '' ?>>همه بات‌ها</option>
+        </select>
         <select name="type" class="border border-[#e2e8f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-[#f8fafc]">
             <option value="">همه لاگ‌ها</option>
             <?php foreach ($types as $t): ?>
                 <option value="<?= $t ?>" <?= $filter_type === $t ? 'selected' : '' ?>><?= strtoupper($t) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">فیلتر</button>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">اعمال فیلتر</button>
     </form>
 </div>
 

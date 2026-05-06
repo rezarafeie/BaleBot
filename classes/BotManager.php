@@ -32,6 +32,8 @@ class BotManager {
         
         // Add platform column to various tables
         try { $this->db->exec("ALTER TABLE `events` ADD `platforms` text DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `events` ADD `next_event_id` INT DEFAULT NULL"); } catch(PDOException $e) {}
+        try { $this->db->exec("ALTER TABLE `event_fields` ADD `is_ai_generated` TINYINT DEFAULT 0"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `bot_users` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `user_states` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}
         try { $this->db->exec("ALTER TABLE `registrations` ADD `platform` varchar(50) DEFAULT 'bale'"); } catch(PDOException $e) {}

@@ -17,6 +17,7 @@
         Deny from all
     </FilesMatch>
 
-    # Handle webhook with clean URLs (optional)
-    # RewriteRule ^api/webhook$ webhook.php [L]
+    # Handle webhook with clean URLs
+    # Maps /bots/USERNAME/webhook_PLATFORM.php to webhook.php?bot_user=USERNAME&platform=PLATFORM
+    RewriteRule ^bots/([a-zA-Z0-9_]+)/webhook_(bale|telegram|rubika)\.php$ webhook.php?bot_user=$1&platform=$2 [QSA,L]
 </IfModule>
